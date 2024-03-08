@@ -1,3 +1,6 @@
 [submodule "DA/MAI-da"]
 	path = DA/MAI-da
 	url = https://github.com/toshunster/MAI-da.git
+[submodule "algorithms/AVL/libs/googletest"]
+	path = algorithms/AVL/libs/googletest
+	url = https://github.com/google/googletest.git

@@ -1,0 +1,241 @@
+\section{Описание}
+Требуется написать реализацию алгоритма поразрядной сортировки. Необходимо отсортировать даты вышеописанного вида. Для удобства каждую дату данного вида представим, как одно число следующей формулой: $day + 100 * month + 10.000 * year$, где $day$, $month$ и $year$ - день, месяц и год данной даты соответственно. Когда мы таким образом представили дату, у нас всегда последние две цифры отвечают за день, третья и четвертая цифра (считая справа) образуют месяц, а оставшиеся цифры образуют год. Теперь удобно будет применить порязрядную сортировку, для обычных чисел.
+
+Основная идея поразрядной сортировки заключается в том, мы разбиваем ключ (по которому идёт сравнение) на несколько частей. И отдельно сортируем каждую из этих частей. Если мы будем идти от менее значимых признаков к более значимым, например от меньших разрядов чисел к большим, то такая сортировка будет называться $LSD$. После того, как отсортированы все части ключей, все исходные объекты будут так же отсортированы.
+
+\pagebreak
+
+\section{Исходный код}
+Первым делом необходимо реализовать наш ключ - дату. Для этого создан класс \enquote{Date}, в котором поля - $day$, $month$, $year$ - день, месяц и год соответственно. А поле $date$ - дата в том формате, в котором она поступила на вход. Для даты реализовано 4 конструктора: $default$, $move-constructor$, $copy-constructor$, а так же конструктор от строки. Так же, реализован метод $parse\_string$, который по строке $date$ заполняет поля $day$, $month$, $year$. Так же, в этом классе реализованы операторы ввода/вывода, $copy-assigment$ $operator$, $move-assigment$ $operator$, а так же геттеры для получения приватных полей. Последний метод - $merge\_date$ осуществляет приведение даты из строки в число по вышеописанному алгоритму.
+
+Теперь опишем структуру \enquote{Data}, которая из себя представляет пару - \enquote{ключ-значение}, где ключ - дата, значение - строка. Для этой структуры реализованы такие же конструкторы, что и класса \enquote{Date}, реализованы операторы ввода/вывода, а так же, $copy-assigment$ $operator$ и $move-assigment$ $operator$.
+
+В конце реализована сама \enquote{LSD} сортировка. В алгоритме мы будет сортировать дату, представив ее, как одно число. Сами эти числа-ключи, будем сортировать по цифрам в восьмеричной системе счисления, т.е. каждый раз будет брать по 8 бит двоичного представления числа. Дальнейший алгоритм таков:
+\begin{enumerate}
+    \item Заводим массив - $counting\_sort$, в котором будет производить сортировку подсчётом, а так же подсчёт префиксных сумм этого массива.
+    \item Находим максимальный ключ, чтобы по нему определять, когда нам стоит прекратить сортировку.
+    \item Теперь, пока мы не перебрали все цифры каждого числа:
+        \begin{enumerate}
+            \item Выполняем сортировку подсчетом для i-го разряда, начиная с младшего.
+            \item Считаем префиксные суммы для подсчитанных цифр.
+            \item Проходимся по исходному массиву в обратом порядке. По текущей цифре каждого элемента и по префиксным суммам, определяем, куда нужно положить текущий пару \enquote{ключ-значение}.
+            \item Зануляем массив $counting\_sort$.
+            \item Меняем исходным массив с буффером местами, обновляем номер разряда и обновляем сдвиг.
+            \item Повторяем пункты $a-e$, пока выполняется условие $3$.
+        \end{enumerate}
+    \item  Массив отсортирован.
+\end{enumerate}
+
+\begin{lstlisting}[language=C++]
+#include <iostream>
+#include <string>
+#include <vector>
+#include <array>
+
+void LSD(std::vector<Data>& vct) {
+    std::array<size_t, 256> counting_sort = {};
+    size_t n = vct.size();
+    std::vector<Data> other(n);
+
+    size_t max = vct[0].key.merge_date();
+    size_t base = 255;
+    size_t digit_number = 0;
+
+    for (Data& el : vct) {
+        max = el.key.merge_date() > max ? el.key.merge_date() : max;
+    }
+
+    /*
+     1) Sort by counting by digit.
+     2) Immediately calculate the prefix sum of this array.
+     3) Write the result to another array.
+    */
+
+    /*
+     (base <= max) || (base > max && max & base) ==
+     A || ~A && B ==
+     A || B       =>
+     base <= max || max & base
+    */
+    while ((base <= max) || (max & base)) {
+        
+        for (Data& el : vct) { // Sorting by counting
+            size_t digit = (el.key.merge_date() & base) >> (8 * digit_number); // Specific number in the 256 system
+            ++counting_sort[digit];
+        }
+
+
+        for (size_t i = 1; i < 256; ++i) { // Counting prefixes
+            counting_sort[i] += counting_sort[i - 1];
+        }
+
+        for (ssize_t i = n - 1; i >= 0; --i) { // Sorting
+            size_t digit = (vct[i].key.merge_date() & base) >> (8 * digit_number);
+            size_t index = --counting_sort[digit];
+            other[index] = std::move(vct[i]);
+        }
+
+        for (size_t& el : counting_sort) { // We zero the array for counting sorting.
+            el = 0;
+        }
+
+        std::swap(vct, other);
+        base <<= 8;
+        ++digit_number;
+
+        if (digit_number == 8) { // We made 8 shifts.
+            break;               // Thus, we exceeded the 8-byte number.
+        }
+    }    
+}
+
+
+int main() {
+    std::ios::sync_with_stdio(false);
+    std::cin.tie(0);
+
+    std::vector<Data> data;
+
+    for (size_t i = 0;;++i) {
+        Data item;
+        if (std::cin >> item) {
+            data.push_back(std::move(item));
+        } else {
+            break;
+        }
+    }
+
+    if (data.size() == 0) {
+        return 0;
+    }
+    
+    LSD(data);
+
+    for (size_t i = 0; i < data.size(); ++i) {
+        std::cout << data[i] << '\n';
+    }
+}
+\end{lstlisting}
+
+Методы класса \enquote{Date} и структуры \enquote{Data}.
+\begin{longtable}{|p{7.5cm}|p{7.5cm}|}
+\hline
+\rowcolor{lightgray}
+\multicolumn{2}{|c|} {main.c}\\
+\hline
+Date()&Конструктор по умолчанию\\
+\hline
+Date(Date\&\&)&Конструктор перемещения по умолчанию\\
+\hline
+Date(const Date\& other)&Конструктор копирования\\
+\hline
+Date(const std::string\& \_date)&Конструктор от строки - даты. В этом конструкторе вызывается метод $parse\_string$\\
+\hline
+Date\& operator=(Date\&\&)&$move-assigment$ $operator$ по умолчанию\\
+\hline
+Date\& operator=(Date\& other)&$copy-assigment$ $operator$\\
+\hline
+uint8\_t get\_day()&Геттер для получения значения поля $day$\\
+\hline
+uint8\_t get\_month()&Геттер для получения значения поля $month$\\
+\hline
+uint16\_t get\_year()&Геттер для получения значения поля $year$\\
+\hline
+size\_t merge\_date()&Метод чтобы представить дату в виде одного числа. Это происходит по формуле: $day + 100 * month + 10.000 * year$\\
+\hline
+void parse\_string()&Приватный метод для парсинга даты в виде строки в три числа: день, месяц и год. В этом методе просто осуществляется проход по строке, и встретив точку анализируется то, что было до нее и арифметическими операциями получается одно из этих трёх чисел.\\
+\hline
+std::ostream\& operator<<(std::ostream\& os, const Date\& date)&Метод для вывода объекта\\
+\hline
+std::istream\& operator>>(std::istream\& is, Date\& date)&Метод для ввода объекта\\
+\hline
+Data()&Конструктор по умолчанию\\
+\hline
+Data(Data\&\&)&Конструктор перемещения по умолчанию\\
+\hline
+Data(const Data\& other)&Конструктор копирования\\
+\hline
+Data(const Date\& key, const std::string\& value)&Конструктор от ключа - даты и значения - строки.\\
+\hline
+Data\& operator=(Data\&\&)&$move-assigment$ $operator$ по умолчанию\\
+\hline
+Data\& operator=(Data\& other)&$copy-assigment$ $operator$\\
+\hline
+std::ostream\& operator<<(std::ostream\& os, const Data\& data)&Метод для вывода объекта\\
+\hline
+std::istream\& operator>>(std::istream\& is, Data\& data)&Метод для ввода объекта\\
+\hline
+\end{longtable}
+\begin{lstlisting}[language=C++]
+class Date {
+
+    friend std::ostream& operator<<(std::ostream& os, const Date& date);
+    friend std::istream& operator>>(std::istream& is, Date& date);
+
+private:
+    uint8_t day = 1;
+    uint8_t month = 1;
+    uint16_t year = 1;
+    std::string date;
+
+    void parse_string();
+
+public:
+    Date() = default;
+    Date(Date&&) = default;
+    Date(const Date& other);
+    Date(const std::string& _date);
+
+    Date& operator=(Date&&) = default;
+    Date& operator=(Date& other);
+
+    uint8_t get_day();
+    uint8_t get_month();
+    uint16_t get_year();
+    size_t merge_date();
+};
+
+
+struct Data {
+    friend std::ostream& operator<<(std::ostream& os, const Data& data);
+    friend std::istream& operator>>(std::istream& is, Data& data);
+
+    Date key;
+    std::string value;
+
+    Data() = default;
+    Data(Data&&) = default;
+    Data(const Date& key, const std::string& value);
+    Data(const Data& other);
+
+    Data& operator=(Data& other);
+    Data& operator=(Data&&) = default;
+};
+\end{lstlisting}
+\pagebreak
+
+\section{Консоль}
+\begin{alltt}
+mason@mint:~/Desktop/algorithms/DA/lab1$ g++ 4-2.cpp -Wall -Wpedantic -Wextra -Werror -std=c++17
+mason@mint:~/Desktop/algorithms/DA/lab1$ cat input 
+1.1.1   xGfxrxGGxrxMMMMfrrrG
+01.02.2008      xGfxrxGGxrxMMMMfrrr
+1.1.1   xGfxrxGGxrxMMMMfrr
+01.02.2008      laklj
+1.07.1005       xGfxrxGGxrxMMMMfrrrG
+01.02.2007      aaaaa
+12.3.4  xGfxrxGGxrxfffMMMMfrr
+11.5.20 asdfasdfasdf
+mason@mint:~/Desktop/algorithms/DA/lab1$ ./a.out < input 
+1.1.1   xGfxrxGGxrxMMMMfrrrG
+1.1.1   xGfxrxGGxrxMMMMfrr
+12.3.4  xGfxrxGGxrxfffMMMMfrr
+11.5.20 asdfasdfasdf
+1.07.1005       xGfxrxGGxrxMMMMfrrrG
+01.02.2007      aaaaa
+01.02.2008      xGfxrxGGxrxMMMMfrrr
+01.02.2008      laklj
+mason@mint:~/Desktop/algorithms/DA/lab1$
+\end{alltt}
+\pagebreak
+

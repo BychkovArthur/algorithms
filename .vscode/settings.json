@@ -1,10 +1,9 @@
 {
     "files.associations": {
         "*.cpp": "cpp",
-        "array": "cpp",
-        "iostream": "cpp",
-        "ostream": "cpp",
+        "iosfwd": "cpp",
         "any": "cpp",
+        "array": "cpp",
         "atomic": "cpp",
         "barrier": "cpp",
         "bit": "cpp",
@@ -65,13 +64,14 @@
         "future": "cpp",
         "initializer_list": "cpp",
         "iomanip": "cpp",
-        "iosfwd": "cpp",
+        "iostream": "cpp",
         "istream": "cpp",
         "latch": "cpp",
         "limits": "cpp",
         "mutex": "cpp",
         "new": "cpp",
         "numbers": "cpp",
+        "ostream": "cpp",
         "ranges": "cpp",
         "scoped_allocator": "cpp",
         "semaphore": "cpp",
@@ -87,8 +87,9 @@
         "typeinfo": "cpp",
         "valarray": "cpp",
         "variant": "cpp",
-        "stacktrace": "cpp",
         "expected": "cpp",
-        "spanstream": "cpp"
-    }
+        "spanstream": "cpp",
+        "stacktrace": "cpp"
+    },
+    "python.REPL.enableREPLSmartSend": false
 }
