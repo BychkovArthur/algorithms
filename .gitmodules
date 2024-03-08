@@ -1,0 +1,3 @@
+[submodule "DA/MAI-da"]
+	path = DA/MAI-da
+	url = https://github.com/toshunster/MAI-da.git
