@@ -129,6 +129,9 @@ public:
     str[sz] = '\0';
   }
 private:
+  /*
+    По идее, тут не будет найден самый последний символ. Например в aab не найдётся b
+  */
   size_t search(const String& other, size_t start, size_t finish, int step) const {
     for (size_t i = start; i != finish; i += step) {
       if (memcmp(str + i, other.str, other.sz) == 0) {

@@ -1,4 +1,4 @@
-#include "string.hpp"
+#include "../include/string.hpp"
 
 #include <iostream>
 #include <cstring>
@@ -7,16 +7,16 @@
 static const size_t DEFAULT_STRING_CAPACITY = 15;
 
 String::String(size_t sz, size_t cap) : 
-    arr(static_cast<char*>(new char[cap + 1])),
+    arr(static_cast<char*>(new char[cap])),
     sz(sz),
-    cap(cap + 1)
+    cap(cap)
     {
         arr[sz] = '\0';
     }
 
-String::String(size_t n) : String(n, n) {}
+String::String(size_t n) : String(n, n + 1) {}
 
-String::String() : String(0, DEFAULT_STRING_CAPACITY) {}
+String::String() : String(0, DEFAULT_STRING_CAPACITY + 1) {}
 
 String::String(const char* c_str) : String(strlen(c_str)) {
     std::copy(c_str, c_str + sz, arr);
@@ -46,34 +46,30 @@ char& String::operator[](size_t ind) {
     return arr[ind];
 }
 
-// const char& String::operator[](size_t ind) const {
-//     return static_cast<const char>(arr[ind]);
-// }
+const char& String::operator[](size_t ind) const {
+    return arr[ind];
+}
 
 char& String::front() {
     return arr[0];
 }
 
-// const char& String::front() const {
-//     return static_cast<const char>(arr[0]);
-// }
+const char& String::front() const {
+    return arr[0];
+}
 
 char& String::back() {
     return arr[sz - 1];
 }
 
-// const char& String::back() const {
-//     return static_cast<const char>(arr[sz - 1]);
-// }
-
+const char& String::back() const {
+    return arr[sz - 1];
+}
 
 void String::push_back(char c) {
     if (sz == cap - 1) {
         cap *= 2;
-        char* new_arr = static_cast<char*>(new char[cap]);
-        std::copy(arr, arr + sz, new_arr);
-        delete[] arr;
-        arr = new_arr;
+        realloc_to_new_cap();
     }
     arr[sz++] = c;
 }
@@ -87,12 +83,65 @@ String& String::operator+=(char c) {
     return *this;
 }
 
-
 String& String::operator+=(const String& other) {
-    
+    size_t new_size = sz + other.sz;
+    bool cap_was_updated = false;
+
+    while (cap - 1 < new_size) {
+        cap *= 2;
+        cap_was_updated = true;
+    }
+
+    if (cap_was_updated) {
+        realloc_to_new_cap();
+    }
+
+    std::copy(other.arr, other.arr + other.sz + 1, arr + sz);
+    sz += other.sz;
+    return *this;
 }
 
+String String::substr(size_t start, size_t count) {
+    if (start > sz) {
+        throw std::out_of_range("Invalid start");
+    }
+    size_t new_string_size = std::min(sz, start + count) - start;
+    String result(new_string_size);
+    std::copy(arr + start, arr + start + new_string_size, result.arr);
+    result[result.sz] = '\0';
+    return result;
+}
 
+size_t String::search(const String& substr, bool is_left_search) {
+    size_t substr_len = substr.length();
+
+    if (!substr_len) {
+        return is_left_search ? 0 : sz;
+    }
+
+    if (substr_len > sz) {
+        return sz;
+    }
+
+    ssize_t start = is_left_search ? 0 : sz - substr_len;
+    ssize_t end = is_left_search ? sz - substr_len + 1 : -1;
+    ssize_t step = is_left_search ? 1 : -1;
+
+    for (ssize_t i = start; i != end; i += step) {
+        if (!std::memcmp(arr + i, substr.data(), substr_len)) {
+            return i;
+        }
+    }
+    return sz;
+}
+
+size_t String::find(const String& substr) {
+    return search(substr, true);
+}
+
+size_t String::rfind(const String& substr) {
+    return search(substr, false);
+}
 
 size_t String::size() const {
     return sz;
@@ -101,7 +150,6 @@ size_t String::size() const {
 size_t String::length() const {
     return sz;
 }
-
 
 /*
     capacity тут без учёта '\0'
@@ -116,13 +164,12 @@ bool String::empty() const {
     return sz == 0;
 }
 
-
 char* String::data() {
     return arr;
 }
 
 const char* String::data() const {
-    return static_cast<const char*>(arr);
+    return arr;
 }
 
 void String::clear() {
@@ -130,31 +177,44 @@ void String::clear() {
     arr[sz] = '\0';
 }
 
-
-bool String::operator<(const String& other) const {
-    return std::memcmp(arr, other.arr, std::min(sz, other.sz) + 1) < 0;
+void String::shrink_to_fit() {
+    if (sz < cap - 1) {
+        cap = sz + 1;
+        realloc_to_new_cap();
+    }
 }
 
-bool String::operator>(const String& other) const {
-    return other < *this;
+bool operator<(const String& str1, const String& str2) {
+    return std::memcmp(str1.data(), str2.data(), std::min(str1.size(), str2.size()) + 1) < 0;
 }
 
-bool String::operator<=(const String& other) const {
-    return !(*this > other);
+bool operator>(const String& str1, const String& str2) {
+    return str2 < str1;
 }
 
-bool String::operator>=(const String& other) const {
-    return !(*this < other);
+bool operator<=(const String& str1, const String& str2) {
+    return !(str1 > str2);
 }
 
-bool String::operator==(const String& other) const {
-    return sz == other.sz && (std::memcmp(arr, other.arr, std::min(sz, other.sz)) == 0);
+bool operator>=(const String& str1, const String& str2) {
+    return !(str1 < str2);
 }
 
-bool String::operator!=(const String& other) const {
-    return !(*this == other);
+bool operator==(const String& str1, const String& str2) {
+    return str1.size() == str2.size() && (std::memcmp(str1.data(), str2.data(), std::min(str1.size(), str2.size())) == 0);
 }
 
+bool operator!=(const String& str1, const String& str2) {
+    return !(str1 == str2);
+}
+
+bool operator==(const char* str1, const String& str2) {
+    return str2.size() == strlen(str1) && (std::memcmp(str1, str2.data(), str2.size()) == 0);
+}
+
+bool operator==(const String& str1, const char* str2) {
+    return str2 == str1;
+}
 
 std::ostream& operator<<(std::ostream& os, const String& str) {
     for (size_t i = 0; i < str.size(); ++i) {
@@ -163,10 +223,41 @@ std::ostream& operator<<(std::ostream& os, const String& str) {
     return os;
 }
 
+std::istream& operator>>(std::istream& is, String& str) {
+    char c;
+    bool string_found = false;
+    str.clear();
+
+    while (is.get(c)) {
+        if (c == '\n') {
+            break;
+        }
+
+        if (!string_found && (c == '\t' || c == ' ')) {
+            continue;
+        }
+        
+        string_found = true;
+        if (c != ' ' && c != '\t') {
+            str.push_back(c);
+        } else {
+            break;
+        }
+    }
+    return is;
+}
+
 void String::swap(String& other) {
     std::swap(arr, other.arr);
     std::swap(cap, other.cap);
     std::swap(sz, other.sz);
+}
+
+void String::realloc_to_new_cap() {
+    char* new_arr = static_cast<char*>(new char[cap]);
+    std::copy(arr, arr + sz + 1, new_arr);
+    std::swap(arr, new_arr);
+    delete[] new_arr;
 }
 
 String operator+(char c, const String& str) {
@@ -183,8 +274,8 @@ String operator+(const String& str, char c) {
     return sum;
 }
 
-// String operator+(const String& str1, const String& str2) {
-//     return;
-// }
-
-
+String operator+(const String& str1, const String& str2) {
+    String sum(str1);
+    sum += str2;
+    return sum;
+}
