@@ -47,10 +47,10 @@ private:
      * @return `pair<Node*& place, Node* parent>` where `parent` - parent for place where `val` must be,
      * `place` - `root` or `parent->left` if `perent->left->val == val` else `parent->right`
      */
-    std::pair<Node*&, Node*> find(int val, Node* start); // MB CONST
+    std::pair<Node*&, Node*> find(int val); // MB CONST
 
     static void print_tree(std::ostream& os, Node* node, size_t tabs);
-    Node* find_max(Node* root) const;
+    std::pair<Node*&, Node*> find_left_max(Node* root) const;
 public:
 
     RB();
@@ -110,7 +110,7 @@ bool RB::empty() const {
     return sz == 0;
 }
 
-std::pair<RB::RB::Node*&, RB::RB::Node*> RB::find(int val, Node* start) {
+std::pair<RB::RB::Node*&, RB::RB::Node*> RB::find(int val) {
 
     if (!root || root->val == val) {
         return {root, nullptr};
@@ -153,12 +153,19 @@ void RB::insert(int val) {
     }
 }
 
-RB::Node* RB::find_max(Node* root) const {
-    Node* curr = root;
+std::pair<RB::Node*&, RB::Node*> RB::find_left_max(Node* root) const { // Здесь надо сделать так же по красоте, как с обычным find. Надо сделать через ссылку.
+    if (!root->left->right) {
+        return {root->left, root};
+    }
+    Node* curr = root->left;
+    Node* prev = nullptr;
+
     while (curr->right) {
+        prev = curr;
         curr = curr->right;
     }
-    return curr;
+
+    return {prev->right, prev};
 }
 
 void RB::erase(int val) {
@@ -175,21 +182,31 @@ void RB::erase(int val) {
         to_delete = nullptr;
 
     } else if (!to_delete->left && to_delete->right) {
-        Node* new_right = to_delete->right;
-        delete to_delete;
-        to_delete->right = new_right;
-        to_delete->right->parent = new_parent;
+        Node* deleted_node = to_delete;
+        to_delete = to_delete->right;
+        to_delete->parent = new_parent;
+        delete deleted_node;
 
     } else if (to_delete->left && !to_delete->right) {
-        Node* new_left = to_delete->left;
-        delete to_delete;
-        to_delete->left = new_left;
-        to_delete->left->parent = new_parent;
+        // std::cout << "HERE" << std::endl;
+        // std::cout << "TO DELETE VAL = " << to_delete->val << " TO DELETE LEFT VAL = " << to_delete->left->val << std::endl; 
+        Node* deleted_node = to_delete;
+        to_delete = to_delete->left;
+        to_delete->parent = new_parent;
+        delete deleted_node;
 
     } else {
-        Node* max = find_max(to_delete->left);
-        std::swap(max->val, to_delete->val);
+        std::pair<Node*&, Node*> place = find_left_max(to_delete);
+        Node* to_delete_new = place.first;
+        std::swap(to_delete_new->val, to_delete->val);
+        place.first = to_delete_new->left;
+        if (place.first) {
+            place.first->parent = place.second;
+            delete to_delete_new;
+        }
     }
+
+    --sz;
 }
 
 
@@ -201,7 +218,10 @@ void RB::print_tree(std::ostream& os, Node* node, size_t tabs) {
     for (size_t i = 0; i < tabs; ++i) {
         os << '\t';
     }
-    os << node->val << '\n';
+    if (node->parent) {
+        os << "\e[1;31m" << node->parent->val << "\e[0m" << ';';
+    }
+    os << "\e[1;32m" << node->val << "\e[0m" << '\n';
     print_tree(os, node->left, tabs + 1);
 }
 
@@ -244,9 +264,43 @@ int main() {
 
 
     std::cout << tree;
+    std::cout << "________________________________________________________________________________" << std::endl;
     tree.insert(3);
     std::cout << tree;
+    std::cout << "________________________________________________________________________________" << std::endl;
     tree.insert(-5);
     std::cout << tree;
+    std::cout << "________________________________________________________________________________" << std::endl;
+    // tree.erase(-5);
+    // tree.erase(26); // ВСЁ ОК
+    // tree.erase(17); // ВСЁ ОК
+    // tree.erase(7);
+    std::cout << tree;
+    std::cout << "________________________________________________________________________________" << std::endl;
+    // tree.erase(13);
+    std::cout << tree;
+    std::cout << "________________________________________________________________________________" << std::endl;
+    tree.erase(23);
+    std::cout << tree;
+    std::cout << "________________________________________________________________________________" << std::endl;
+    tree.erase(26);
+    std::cout << tree;
+    std::cout << "________________________________________________________________________________" << std::endl;
+    // RB::RB tree2;
+
+    // for (int i = 10; i >= 0; --i) {
+    //     tree2.insert(i);
+    // }
+    // std::cout << tree2;
+    // std::cout << "________________________________________________________________________________" << std::endl;
+    // tree2.erase(4);
+    // std::cout << tree2;
+    // std::cout << "________________________________________________________________________________" << std::endl;
+    // tree2.erase(9);
+    // std::cout << tree2;
+    // std::cout << "________________________________________________________________________________" << std::endl;
+    // tree2.erase(10);
+    // std::cout << tree2;
+    // std::cout << "________________________________________________________________________________" << std::endl;
 }
 
