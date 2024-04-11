@@ -1,6 +1,8 @@
 #include <iostream>
 #include <vector>
 
+#include "rb.hpp"
+
 /*
     TODO:
 
@@ -11,57 +13,24 @@
     5) ??? Сделать константными contains и find
     6) Красиво задокументировать методы
 
+
+    7) Надо что то сделать с методами для тестирования. В классе их оставлять как то глупо.
+
+    8) Проверять значение родителей. ++++
+*/
+
+
+
+/*
+    1) Если мой родитель - красный, то он не корень. Значит, у меня есть дед.
+    
+
 */
 
 
 namespace RB {
 
-class RB {
-    friend std::ostream& operator<<(std::ostream&, const RB&);
-private:
-    struct Node {
-    public:
-        int val;
-        Node* left;
-        Node* right;
-        Node* parent;
-        bool _is_black;
-        
-        Node();
-        Node(int val);
-        Node(int val, Node* parent);
-        Node(int val, Node* parent, bool is_black);
 
-        ~Node() = default;
-
-        bool is_black() const;
-        bool is_red() const;
-    };
-    Node* root;
-    size_t sz;
-
-    /**
-     * Нахождение вершины, где должно быть указанное значение.
-     *
-     * @param val Значение, которое необходимо найти.
-     * @return `pair<Node*& place, Node* parent>` where `parent` - parent for place where `val` must be,
-     * `place` - `root` or `parent->left` if `perent->left->val == val` else `parent->right`
-     */
-    std::pair<Node*&, Node*> find(int val); // MB CONST
-
-    static void print_tree(std::ostream& os, Node* node, size_t tabs);
-    std::pair<Node*&, Node*> find_left_max(Node* root) const;
-public:
-
-    RB();
-
-    bool contains(int val); // MB CONST
-    void insert(int val);
-    void erase(int val);
-    size_t size() const;
-    bool empty() const;
-    
-};
 
 /*
     NODE
@@ -231,6 +200,59 @@ std::ostream& operator<<(std::ostream& os, const RB& tree) {
     return os;
 }
 
+void RB::get_nodes_in_NLR_traversal_order(std::vector<RB::Node*>& vct) {
+    get_nodes_in_NLR_traversal_order(vct, root);
+}
+
+void RB::get_nodes_in_NLR_traversal_order(std::vector<RB::Node*>& vct, Node* node) {
+    if (!node) {
+        return;
+    }
+    vct.push_back(node);
+    get_nodes_in_NLR_traversal_order(vct, node->left);
+    get_nodes_in_NLR_traversal_order(vct, node->right);
+}
+
+void RB::left_rotation(Node*& node) {
+    Node* a = node;                     // Это как в конспекте. Эти вершины обязательно должны быть.
+    Node* b = node->right;              // Это как в конспекте. Эти вершины обязательно должны быть.
+    Node* parent = node->parent;
+
+    // Node* alpha = a->left;           // Это как в конспекте. Эти вершины могут не быть.
+    Node* betta = b->left;              // Это как в конспекте. Эти вершины могут не быть.
+    // Node* gamma = b->right;          // Это как в конспекте. Эти вершины могут не быть.
+
+    node = b;
+    b->parent = parent;
+    b->left = a;
+    a->parent = b;
+    a->right = betta;
+
+    if (betta) {
+        betta->parent = a;
+    }
+}
+
+void RB::right_rotation(Node*& node) {
+    Node* a = node;                     // Это как в конспекте. Эти вершины обязательно должны быть.
+    Node* b = node->left;               // Это как в конспекте. Эти вершины обязательно должны быть.
+    Node* parent = node->parent;
+
+    // Node* alpha = b->left;           // Это как в конспекте. Эти вершины могут не быть.            
+    Node* betta = b->right;             // Это как в конспекте. Эти вершины могут не быть.
+    // Node* gamma = a->right;          // Это как в конспекте. Эти вершины могут не быть.
+
+    node = b;
+    b->parent = parent;
+    b->right = a;
+    a->parent = b;
+    a->left = betta;
+
+    if (betta) {
+        betta->parent = a;
+    }
+}
+
 /*
     TREE
     ______________________________________________________________________________________________________________________________________
@@ -243,64 +265,64 @@ std::ostream& operator<<(std::ostream& os, const RB& tree) {
 
 
 
-int main() {
+// int main() {
 
 
-    // int a = 5;
+//     // int a = 5;
 
-    // int& b = a;
+//     // int& b = a;
 
-    // int& c = b;
+//     // int& c = b;
 
-    RB::RB tree;
+//     RB::RB tree;
 
-    std::vector<int> vct = {26, 17, 41, 30, 47, 28, 38, 35, 39, 14, 21, 10, 16, 19, 23, 7, 12, 15, 20, 3};
-
-
-    for (int el : vct) {
-        tree.insert(el);
-    }
+//     std::vector<int> vct = {26, 17, 41, 30, 47, 28, 38, 35, 39, 14, 21, 10, 16, 19, 23, 7, 12, 15, 20, 3};
 
 
+//     for (int el : vct) {
+//         tree.insert(el);
+//     }
 
-    std::cout << tree;
-    std::cout << "________________________________________________________________________________" << std::endl;
-    tree.insert(3);
-    std::cout << tree;
-    std::cout << "________________________________________________________________________________" << std::endl;
-    tree.insert(-5);
-    std::cout << tree;
-    std::cout << "________________________________________________________________________________" << std::endl;
-    // tree.erase(-5);
-    // tree.erase(26); // ВСЁ ОК
-    // tree.erase(17); // ВСЁ ОК
-    // tree.erase(7);
-    std::cout << tree;
-    std::cout << "________________________________________________________________________________" << std::endl;
-    // tree.erase(13);
-    std::cout << tree;
-    std::cout << "________________________________________________________________________________" << std::endl;
-    tree.erase(23);
-    std::cout << tree;
-    std::cout << "________________________________________________________________________________" << std::endl;
-    tree.erase(26);
-    std::cout << tree;
-    std::cout << "________________________________________________________________________________" << std::endl;
-    // RB::RB tree2;
 
-    // for (int i = 10; i >= 0; --i) {
-    //     tree2.insert(i);
-    // }
-    // std::cout << tree2;
-    // std::cout << "________________________________________________________________________________" << std::endl;
-    // tree2.erase(4);
-    // std::cout << tree2;
-    // std::cout << "________________________________________________________________________________" << std::endl;
-    // tree2.erase(9);
-    // std::cout << tree2;
-    // std::cout << "________________________________________________________________________________" << std::endl;
-    // tree2.erase(10);
-    // std::cout << tree2;
-    // std::cout << "________________________________________________________________________________" << std::endl;
-}
+
+//     std::cout << tree;
+//     std::cout << "________________________________________________________________________________" << std::endl;
+//     tree.insert(3);
+//     std::cout << tree;
+//     std::cout << "________________________________________________________________________________" << std::endl;
+//     tree.insert(-5);
+//     std::cout << tree;
+//     std::cout << "________________________________________________________________________________" << std::endl;
+//     // tree.erase(-5);
+//     // tree.erase(26); // ВСЁ ОК
+//     // tree.erase(17); // ВСЁ ОК
+//     // tree.erase(7);
+//     std::cout << tree;
+//     std::cout << "________________________________________________________________________________" << std::endl;
+//     // tree.erase(13);
+//     std::cout << tree;
+//     std::cout << "________________________________________________________________________________" << std::endl;
+//     tree.erase(23);
+//     std::cout << tree;
+//     std::cout << "________________________________________________________________________________" << std::endl;
+//     tree.erase(26);
+//     std::cout << tree;
+//     std::cout << "________________________________________________________________________________" << std::endl;
+//     // RB::RB tree2;
+
+//     // for (int i = 10; i >= 0; --i) {
+//     //     tree2.insert(i);
+//     // }
+//     // std::cout << tree2;
+//     // std::cout << "________________________________________________________________________________" << std::endl;
+//     // tree2.erase(4);
+//     // std::cout << tree2;
+//     // std::cout << "________________________________________________________________________________" << std::endl;
+//     // tree2.erase(9);
+//     // std::cout << tree2;
+//     // std::cout << "________________________________________________________________________________" << std::endl;
+//     // tree2.erase(10);
+//     // std::cout << tree2;
+//     // std::cout << "________________________________________________________________________________" << std::endl;
+// }
 
