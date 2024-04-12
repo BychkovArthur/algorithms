@@ -26,9 +26,6 @@ private:
         Node(int val, Node* parent, bool is_black);
 
         ~Node() = default;
-
-        bool is_black() const;
-        bool is_red() const;
     };
     Node* root;
     size_t sz;
@@ -53,6 +50,13 @@ private:
 
     static void left_rotation(Node*& node);
     static void right_rotation(Node*& node);
+
+    static bool is_black(Node* node);
+    static bool is_red(Node* node);
+    static void make_red(Node* node);
+    static void make_black(Node* node);
+
+    void insert_fixup(Node* node);
 public:
 
     RB();

@@ -9,23 +9,16 @@
     1) Конструкторы для Node
     2) Не хранить is_black, вместо этого использовать биты указателей.
     3) Надо ли сделать size inline???
-    4) добавить проверку на null для is_black, вынести это из node.
     5) ??? Сделать константными contains и find
     6) Красиво задокументировать методы
 
-
     7) Надо что то сделать с методами для тестирования. В классе их оставлять как то глупо.
 
+    4) добавить проверку на null для is_black, вынести это из node. +
     8) Проверять значение родителей. ++++
+    9) Заменить присваивание цвета на метод +++
 */
 
-
-
-/*
-    1) Если мой родитель - красный, то он не корень. Значит, у меня есть дед.
-    
-
-*/
 
 
 namespace RB {
@@ -42,23 +35,10 @@ RB::Node::Node(int val) : val(val), left(nullptr), right(nullptr), parent(nullpt
 RB::Node::Node(int val, Node* parent) : val(val), left(nullptr), right(nullptr), parent(parent), _is_black(false) {}
 RB::Node::Node(int val, Node* parent, bool is_black) : val(val), left(nullptr), right(nullptr), parent(parent), _is_black(is_black) {}
 
-inline bool RB::Node::is_black() const {
-    return _is_black; 
-}
-
-inline bool RB::Node::is_red() const {
-    return !_is_black;
-}
-
 /*
     NODE
     ______________________________________________________________________________________________________________________________________
 */
-
-
-
-
-
 
 
 
@@ -119,7 +99,61 @@ void RB::insert(int val) {
     if (!place.first) {
         place.first = new Node(val, place.second);
         ++sz;
+        insert_fixup(place.first);
     }
+}
+
+void RB::insert_fixup(Node* node) {
+
+    while (is_red(node->parent)) {
+
+        Node* dad = node->parent;
+        Node* granddad = dad->parent;
+
+        if (granddad->left == dad) {
+            Node* uncle = granddad->right;
+            if (is_red(uncle)) {
+                make_black(uncle);
+                make_black(dad);
+                make_red(granddad);
+                node = granddad;
+            } else {
+                if (dad->right == node) {
+                    std::swap(dad, node);
+                    left_rotation(granddad->left);
+                }
+                make_red(granddad);
+                make_black(dad);
+                if (granddad->parent) {
+                    right_rotation(granddad->parent->left == granddad ? granddad->parent->left : granddad->parent->right);
+                } else {
+                    right_rotation(root);
+                }
+            }
+
+        } else {
+            Node* uncle = granddad->left;
+            if (is_red(uncle)) {
+                make_black(uncle);
+                make_black(dad);
+                make_red(granddad);
+                node = granddad;
+            } else {
+                if (dad->left == node) {
+                    std::swap(dad, node);
+                    right_rotation(granddad->right);
+                }
+                make_red(granddad);
+                make_black(dad);
+                if (granddad->parent) {
+                    left_rotation(granddad->parent->left == granddad ? granddad->parent->left : granddad->parent->right);
+                } else {
+                    left_rotation(root);
+                }
+            }
+        }
+    }
+    root->_is_black = true;
 }
 
 std::pair<RB::Node*&, RB::Node*> RB::find_left_max(Node* root) const { // Здесь надо сделать так же по красоте, как с обычным find. Надо сделать через ссылку.
@@ -253,76 +287,23 @@ void RB::right_rotation(Node*& node) {
     }
 }
 
+inline bool RB::is_black(Node* node) {
+    return !node || node->_is_black; 
+}
+
+inline bool RB::is_red(Node* node) {
+    return node && !node->_is_black;
+}
+
+inline void RB::make_red(Node* node) {
+    node->_is_black = false;
+}
+inline void RB::make_black(Node* node) {
+    node->_is_black = true;
+}
+
 /*
     TREE
     ______________________________________________________________________________________________________________________________________
 */
-
-
-
-
 };
-
-
-
-// int main() {
-
-
-//     // int a = 5;
-
-//     // int& b = a;
-
-//     // int& c = b;
-
-//     RB::RB tree;
-
-//     std::vector<int> vct = {26, 17, 41, 30, 47, 28, 38, 35, 39, 14, 21, 10, 16, 19, 23, 7, 12, 15, 20, 3};
-
-
-//     for (int el : vct) {
-//         tree.insert(el);
-//     }
-
-
-
-//     std::cout << tree;
-//     std::cout << "________________________________________________________________________________" << std::endl;
-//     tree.insert(3);
-//     std::cout << tree;
-//     std::cout << "________________________________________________________________________________" << std::endl;
-//     tree.insert(-5);
-//     std::cout << tree;
-//     std::cout << "________________________________________________________________________________" << std::endl;
-//     // tree.erase(-5);
-//     // tree.erase(26); // ВСЁ ОК
-//     // tree.erase(17); // ВСЁ ОК
-//     // tree.erase(7);
-//     std::cout << tree;
-//     std::cout << "________________________________________________________________________________" << std::endl;
-//     // tree.erase(13);
-//     std::cout << tree;
-//     std::cout << "________________________________________________________________________________" << std::endl;
-//     tree.erase(23);
-//     std::cout << tree;
-//     std::cout << "________________________________________________________________________________" << std::endl;
-//     tree.erase(26);
-//     std::cout << tree;
-//     std::cout << "________________________________________________________________________________" << std::endl;
-//     // RB::RB tree2;
-
-//     // for (int i = 10; i >= 0; --i) {
-//     //     tree2.insert(i);
-//     // }
-//     // std::cout << tree2;
-//     // std::cout << "________________________________________________________________________________" << std::endl;
-//     // tree2.erase(4);
-//     // std::cout << tree2;
-//     // std::cout << "________________________________________________________________________________" << std::endl;
-//     // tree2.erase(9);
-//     // std::cout << tree2;
-//     // std::cout << "________________________________________________________________________________" << std::endl;
-//     // tree2.erase(10);
-//     // std::cout << tree2;
-//     // std::cout << "________________________________________________________________________________" << std::endl;
-// }
-

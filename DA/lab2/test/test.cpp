@@ -185,7 +185,7 @@ TEST_P(EraseWithoutFixupParametrizedTest, IncorrectErase) {
     RB::erase_values(to_erase, tree);
 
     // assert
-
+    std::cout << tree << std::endl;
     ASSERT_TRUE(RB::is_correct_NLR_sequence(correctr_NLR_sequence, tree));
     ASSERT_TRUE(RB::is_correct_parents(parents, tree));
     ASSERT_EQ(tree.size(), correctr_NLR_sequence.size());
