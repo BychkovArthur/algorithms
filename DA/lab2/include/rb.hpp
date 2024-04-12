@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace RB {
@@ -11,6 +12,7 @@ class RB {
     friend bool is_correct_NLR_sequence(std::vector<int>& correct_sequence, RB& tree);
     friend bool is_correct_parents(std::unordered_map<int, int>& parents, RB& tree);
     friend void make_left_rotation(int rotation_root, RB& tree);
+    friend bool is_correct_colors(std::unordered_map<int, bool>& is_black_node, RB& tree);
 private:
     struct Node {
     public:
@@ -57,6 +59,7 @@ private:
     static void make_black(Node* node);
 
     void insert_fixup(Node* node);
+    bool is_correct_tree(Node* node, std::unordered_set<int>& st, int cnt);
 public:
 
     RB();
@@ -67,6 +70,7 @@ public:
     size_t size() const;
     bool empty() const;
     
+    bool is_correct_tree(); // private
 };
 
 };

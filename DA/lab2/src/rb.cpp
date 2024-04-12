@@ -23,8 +23,6 @@
 
 namespace RB {
 
-
-
 /*
     NODE
     ______________________________________________________________________________________________________________________________________
@@ -47,9 +45,7 @@ RB::Node::Node(int val, Node* parent, bool is_black) : val(val), left(nullptr), 
     ______________________________________________________________________________________________________________________________________
 */
 
-
 RB::RB() : root(nullptr), sz(0) {}
-
 
 size_t RB::size() const {
     return sz;
@@ -88,7 +84,6 @@ std::pair<RB::RB::Node*&, RB::RB::Node*> RB::find(int val) {
         return {prev->right, prev};
     }
 }
-
 
 bool RB::contains(int val) {
     return find(val).first;
@@ -212,22 +207,30 @@ void RB::erase(int val) {
     --sz;
 }
 
-
 void RB::print_tree(std::ostream& os, Node* node, size_t tabs) {
     if (!node) {
         return;
     }
+
     print_tree(os, node->right, tabs + 1);
     for (size_t i = 0; i < tabs; ++i) {
         os << '\t';
     }
-    if (node->parent) {
-        os << "\e[1;31m" << node->parent->val << "\e[0m" << ';';
+
+    if (is_red(node)) {
+        os << "\e[1;31m";
     }
-    os << "\e[1;32m" << node->val << "\e[0m" << '\n';
+    if (node->parent) {
+        os << "(p=" << node->parent->val << ")";
+    }
+    os << "(v=" << node->val << ')';
+    if (is_red(node)) {
+        std::cout << "\e[0m";
+    }
+    std::cout << '\n';
+
     print_tree(os, node->left, tabs + 1);
 }
-
 
 std::ostream& operator<<(std::ostream& os, const RB& tree) {
     RB::print_tree(os, tree.root, 0);
@@ -300,6 +303,31 @@ inline void RB::make_red(Node* node) {
 }
 inline void RB::make_black(Node* node) {
     node->_is_black = true;
+}
+
+bool RB::is_correct_tree() {
+    if (!is_black(root)) {
+        return false;
+    }
+    std::unordered_set<int> st;
+    return is_correct_tree(root, st, 0) && st.size() == 1;
+}
+
+bool RB::is_correct_tree(Node* node, std::unordered_set<int>& st, int cnt) {
+    if (!node) {
+        st.insert(cnt);
+        return true;
+    }
+
+    if (is_red(node) && is_red(node->parent)) {
+        return false;
+    }
+
+    if (is_black(node)) {
+        ++cnt;
+    }
+    
+    return is_correct_tree(node->left, st, cnt) && is_correct_tree(node->right, st, cnt);
 }
 
 /*
