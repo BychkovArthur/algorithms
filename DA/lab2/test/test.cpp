@@ -18,11 +18,10 @@ bool is_correct_parents(std::unordered_map<int, int>& parents, RB& tree) {
     for (size_t i = 0; i < seq.size(); ++i) {
         RB::Node* node = seq[i];
 
-        if (!node->parent) {
+        if (!RB::make_normal_ptr(node->parent)) {
             continue;
         }
-
-        if (!parents.contains(node->val) || parents[node->val] != node->parent->val) {
+        if (!parents.contains(node->val) || parents[node->val] != RB::make_normal_ptr(node->parent)->val) {
             return false;
         } else {
             parents.erase(node->val);
@@ -67,7 +66,7 @@ bool is_correct_colors(std::unordered_map<int, bool>& is_black_node, RB& tree) {
     }
 
     for (size_t i = 0; i < seq.size(); ++i) {
-        if (!is_black_node.contains(seq[i]->val) || (!seq[i] || seq[i]->_is_black) != is_black_node[seq[i]->val]) {
+        if (!is_black_node.contains(seq[i]->val) || ((RB::is_black(seq[i])) != is_black_node[seq[i]->val])) {
             return false;
         }
         is_black_node.erase(seq[i]->val);
@@ -201,7 +200,6 @@ bool is_correct_colors(std::unordered_map<int, bool>& is_black_node, RB& tree) {
 //     RB::erase_values(to_erase, tree);
 
 //     // assert
-//     std::cout << tree << std::endl;
 //     ASSERT_TRUE(RB::is_correct_NLR_sequence(correctr_NLR_sequence, tree));
 //     ASSERT_TRUE(RB::is_correct_parents(parents, tree));
 //     ASSERT_EQ(tree.size(), correctr_NLR_sequence.size());

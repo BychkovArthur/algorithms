@@ -6,19 +6,19 @@
 /*
     TODO:
 
-    1) Конструкторы для Node
-    2) Не хранить is_black, вместо этого использовать биты указателей.
     3) Надо ли сделать size inline???
     5) ??? Сделать константными contains и find
     6) Красиво задокументировать методы
 
     7) Надо что то сделать с методами для тестирования. В классе их оставлять как то глупо.
 
+
+    1) Конструкторы для Node ++++
+    2) Не хранить is_black, вместо этого использовать биты указателей. +++++
     4) добавить проверку на null для is_black, вынести это из node. +
     8) Проверять значение родителей. ++++
     9) Заменить присваивание цвета на метод +++
 */
-
 
 
 namespace RB {
@@ -28,10 +28,14 @@ namespace RB {
     ______________________________________________________________________________________________________________________________________
 */
 
-RB::Node::Node() : val(0), left(nullptr), right(nullptr), parent(nullptr), _is_black(false) {}
-RB::Node::Node(int val) : val(val), left(nullptr), right(nullptr), parent(nullptr), _is_black(false) {}
-RB::Node::Node(int val, Node* parent) : val(val), left(nullptr), right(nullptr), parent(parent), _is_black(false) {}
-RB::Node::Node(int val, Node* parent, bool is_black) : val(val), left(nullptr), right(nullptr), parent(parent), _is_black(is_black) {}
+RB::Node::Node() : val(0), left(nullptr), right(nullptr), parent(nullptr) {}
+RB::Node::Node(int val) : val(val), left(nullptr), right(nullptr), parent(nullptr) {}
+RB::Node::Node(int val, Node* parent) : val(val), left(nullptr), right(nullptr), parent(parent) {}
+RB::Node::Node(int val, Node* parent, bool is_black) : val(val), left(nullptr), right(nullptr), parent(parent) {
+    if (is_black) {
+        make_black(this);
+    }
+}
 
 /*
     NODE
@@ -100,10 +104,10 @@ void RB::insert(int val) {
 
 void RB::insert_fixup(Node* node) {
 
-    while (is_red(node->parent)) {
+    while (is_red(make_normal_ptr(node->parent))) {
 
-        Node* dad = node->parent;
-        Node* granddad = dad->parent;
+        Node* dad = make_normal_ptr(node->parent);
+        Node* granddad = make_normal_ptr(dad->parent);
 
         if (granddad->left == dad) {
             Node* uncle = granddad->right;
@@ -119,8 +123,8 @@ void RB::insert_fixup(Node* node) {
                 }
                 make_red(granddad);
                 make_black(dad);
-                if (granddad->parent) {
-                    right_rotation(granddad->parent->left == granddad ? granddad->parent->left : granddad->parent->right);
+                if (make_normal_ptr(granddad->parent)) {
+                    right_rotation(make_normal_ptr(granddad->parent)->left == granddad ? make_normal_ptr(granddad->parent)->left : make_normal_ptr(granddad->parent)->right);
                 } else {
                     right_rotation(root);
                 }
@@ -141,14 +145,14 @@ void RB::insert_fixup(Node* node) {
                 make_red(granddad);
                 make_black(dad);
                 if (granddad->parent) {
-                    left_rotation(granddad->parent->left == granddad ? granddad->parent->left : granddad->parent->right);
+                    left_rotation(make_normal_ptr(granddad->parent)->left == granddad ? make_normal_ptr(granddad->parent)->left : make_normal_ptr(granddad->parent)->right);
                 } else {
                     left_rotation(root);
                 }
             }
         }
     }
-    root->_is_black = true;
+    make_black(root);
 }
 
 std::pair<RB::Node*&, RB::Node*> RB::find_left_max(Node* root) const { // Здесь надо сделать так же по красоте, как с обычным find. Надо сделать через ссылку.
@@ -182,15 +186,13 @@ void RB::erase(int val) {
     } else if (!to_delete->left && to_delete->right) {
         Node* deleted_node = to_delete;
         to_delete = to_delete->right;
-        to_delete->parent = new_parent;
+        set_parent(to_delete, new_parent);
         delete deleted_node;
 
-    } else if (to_delete->left && !to_delete->right) {
-        // std::cout << "HERE" << std::endl;
-        // std::cout << "TO DELETE VAL = " << to_delete->val << " TO DELETE LEFT VAL = " << to_delete->left->val << std::endl; 
+    } else if (to_delete->left && !to_delete->right) { 
         Node* deleted_node = to_delete;
         to_delete = to_delete->left;
-        to_delete->parent = new_parent;
+        set_parent(to_delete, new_parent);
         delete deleted_node;
 
     } else {
@@ -199,7 +201,7 @@ void RB::erase(int val) {
         std::swap(to_delete_new->val, to_delete->val);
         place.first = to_delete_new->left;
         if (place.first) {
-            place.first->parent = place.second;
+            set_parent(place.first, place.second);
             delete to_delete_new;
         }
     }
@@ -220,8 +222,8 @@ void RB::print_tree(std::ostream& os, Node* node, size_t tabs) {
     if (is_red(node)) {
         os << "\e[1;31m";
     }
-    if (node->parent) {
-        os << "(p=" << node->parent->val << ")";
+    if (make_normal_ptr(node->parent)) {
+        os << "(p=" << make_normal_ptr(node->parent)->val << ")";
     }
     os << "(v=" << node->val << ')';
     if (is_red(node)) {
@@ -253,56 +255,71 @@ void RB::get_nodes_in_NLR_traversal_order(std::vector<RB::Node*>& vct, Node* nod
 void RB::left_rotation(Node*& node) {
     Node* a = node;                     // Это как в конспекте. Эти вершины обязательно должны быть.
     Node* b = node->right;              // Это как в конспекте. Эти вершины обязательно должны быть.
-    Node* parent = node->parent;
+    Node* parent = make_normal_ptr(node->parent);
 
     // Node* alpha = a->left;           // Это как в конспекте. Эти вершины могут не быть.
     Node* betta = b->left;              // Это как в конспекте. Эти вершины могут не быть.
     // Node* gamma = b->right;          // Это как в конспекте. Эти вершины могут не быть.
 
     node = b;
-    b->parent = parent;
+    set_parent(b, parent);
     b->left = a;
-    a->parent = b;
+    set_parent(a, b);
     a->right = betta;
 
     if (betta) {
-        betta->parent = a;
+        set_parent(betta, a);
     }
 }
 
 void RB::right_rotation(Node*& node) {
     Node* a = node;                     // Это как в конспекте. Эти вершины обязательно должны быть.
     Node* b = node->left;               // Это как в конспекте. Эти вершины обязательно должны быть.
-    Node* parent = node->parent;
+    Node* parent = make_normal_ptr(node->parent);
 
     // Node* alpha = b->left;           // Это как в конспекте. Эти вершины могут не быть.            
     Node* betta = b->right;             // Это как в конспекте. Эти вершины могут не быть.
     // Node* gamma = a->right;          // Это как в конспекте. Эти вершины могут не быть.
 
     node = b;
-    b->parent = parent;
+    set_parent(b, parent);
     b->right = a;
-    a->parent = b;
+    set_parent(a, b);
     a->left = betta;
 
     if (betta) {
-        betta->parent = a;
+        set_parent(betta, a);
     }
 }
 
 inline bool RB::is_black(Node* node) {
-    return !node || node->_is_black; 
+    return !node || (reinterpret_cast<size_t>(node->parent) & 1ULL); 
 }
 
 inline bool RB::is_red(Node* node) {
-    return node && !node->_is_black;
+    return node && !(reinterpret_cast<size_t>(node->parent) & 1ULL);
 }
 
 inline void RB::make_red(Node* node) {
-    node->_is_black = false;
+    node->parent = reinterpret_cast<Node*>(reinterpret_cast<size_t>(node->parent) & (UINT64_MAX - 1));
 }
+
 inline void RB::make_black(Node* node) {
-    node->_is_black = true;
+    node->parent = reinterpret_cast<Node*>(reinterpret_cast<size_t>(node->parent) | 1ULL);
+}
+
+inline RB::Node* RB::make_normal_ptr(Node* ptr) {
+    return reinterpret_cast<Node*>(reinterpret_cast<size_t>(ptr) & (UINT64_MAX - 1));
+}
+
+inline void RB::set_parent(Node* child, Node* parent) {
+    if (is_black(child)) {
+        child->parent = parent;
+        make_black(child);
+    } else {
+        child->parent = parent;
+        make_red(child);
+    }
 }
 
 bool RB::is_correct_tree() {
@@ -319,7 +336,7 @@ bool RB::is_correct_tree(Node* node, std::unordered_set<int>& st, int cnt) {
         return true;
     }
 
-    if (is_red(node) && is_red(node->parent)) {
+    if (is_red(node) && is_red(make_normal_ptr(node->parent))) {
         return false;
     }
 

@@ -20,7 +20,6 @@ private:
         Node* left;
         Node* right;
         Node* parent;
-        bool _is_black;
         
         Node();
         Node(int val);
@@ -57,6 +56,8 @@ private:
     static bool is_red(Node* node);
     static void make_red(Node* node);
     static void make_black(Node* node);
+    static Node* make_normal_ptr(Node* ptr);
+    static void set_parent(Node* child, Node* parent);
 
     void insert_fixup(Node* node);
     bool is_correct_tree(Node* node, std::unordered_set<int>& st, int cnt);
