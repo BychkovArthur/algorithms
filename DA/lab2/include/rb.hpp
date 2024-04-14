@@ -59,6 +59,8 @@ private:
     static Node* make_normal_ptr(Node* ptr);
     static void set_parent(Node* child, Node* parent);
 
+    Node*& get_ref_to_node(Node* node);
+
     void insert_fixup(Node* node);
     void erase_fixup(Node* parent, bool left_bh_decreased);
     bool is_correct_tree(Node* node, std::unordered_set<int>& st, int cnt);

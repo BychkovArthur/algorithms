@@ -2,7 +2,7 @@
 #include <vector>
 
 #include "rb.hpp"
-
+using namespace std;
 /*
     TODO:
 
@@ -191,6 +191,9 @@ void RB::erase(int val) {
         delete to_delete;
         to_delete = nullptr;
 
+        // cout << "tree2 = " << endl;
+        // cout << *this << endl;
+
         if (need_fixup) {
             erase_fixup(new_parent, left_bh_decreased);
         }
@@ -222,26 +225,31 @@ void RB::erase(int val) {
         // У удаляемой вершины нет детей. Значит возможны случаи 1 и 4.
         // Здесь в отличие от самого первого ифа (когда мы проверяем, что нет детей вообще) всегда будет родитель.
         if (is_black(to_delete_new) && !to_delete_new->left) {
+            // cout << "kkk" << endl;
             need_fixup = true;
             left_bh_decreased = place.second->left == to_delete_new;
         }
 
-        std::cout << place.second->val << std::endl;
+        // std::cout << place.second->val << std::endl;
 
         std::swap(place.first->val, to_delete->val);
-        std::cout << place.second->val << std::endl;
+
         place.first = place.first->left;
         if (place.first) {
+            // cout << "jjj" << endl;
             set_parent(place.first, place.second);
             
-            make_black(to_delete); // Балансировка, случай 3.
+            make_black(place.first); // Балансировка, случай 3.
         }
 
         delete to_delete_new;
 
+        // cout << "tree1 = " << endl;
+        // cout << *this << endl;
+
         if (need_fixup) {
-            std::cout << "HErelkjlkjjkl" << std::endl;
-            std::cout << place.second->val << std::endl;
+            // std::cout << "HErelkjlkjjkl" << std::endl;
+            // std::cout << place.second->val << std::endl;
             erase_fixup(place.second, left_bh_decreased);
         }
     }
@@ -251,20 +259,22 @@ void RB::erase(int val) {
 
 void RB::erase_fixup(Node* parent, bool left_bh_decreased) {
     // Изначально parent 100% не корень
-    
+    // cout << "fixip" << endl;
     while (true) {
         Node* brother = left_bh_decreased ? parent->right : parent->left;
 
-        std::cout << "side = " << left_bh_decreased<< std::endl;
+        // std::cout << "side = " << left_bh_decreased<< std::endl;
 
         if (is_red(brother)) { // Случай 4, подслучай 2. Брат - красный.
-        
+            // cout << "red bro" << endl;
             make_red(parent);
             make_black(brother);
+            
+            Node*& parent_ref = get_ref_to_node(parent);
             if (left_bh_decreased) {
-                left_rotation(parent);
+                left_rotation(parent_ref);
             } else {
-                right_rotation(parent);
+                right_rotation(parent_ref);
             }
 
             // По идее, этого делать даже не надо, т.к. на следующей итерации будет верный брат
@@ -272,12 +282,13 @@ void RB::erase_fixup(Node* parent, bool left_bh_decreased) {
         
         } else { // Случай 4, подслучай 3. Брат - черный.
 
-            std::cout << "HEre0" << std::endl;
-            std::cout << parent->val << ' ' << std::endl;
-            std::cout << brother->left << std::endl;
-            std::cout << "HEre0" << std::endl;
+            // std::cout << "HEre0" << std::endl;
+            // std::cout << parent->val << ' ' << std::endl;
+            // std::cout << brother->left << std::endl;
+            // std::cout << "HEre0" << std::endl;
+
             if (is_black(brother->left) && is_black(brother->right)) { // Подслучай 3.1
-                std::cout << "HEre1" << std::endl;
+                // std::cout << "HEre1" << std::endl;
                 bool parent_was_red = is_red(parent);
                 
                 make_red(brother);
@@ -298,8 +309,10 @@ void RB::erase_fixup(Node* parent, bool left_bh_decreased) {
             // brothers_red_son это вершина s2 в конспекте
             } else if (Node* brothers_red_son = left_bh_decreased ? brother->right : brother->left; is_red(brothers_red_son)) { // Подслучай 3.3.
                 // Перекраска всех
-                std::cout << "HEre3" << std::endl;
+                // std::cout << "HEre3" << std::endl;
+
                 bool parent_was_black = is_black(parent);
+
                 if (parent_was_black) {
                     make_black(brother);
                 } else {
@@ -309,15 +322,17 @@ void RB::erase_fixup(Node* parent, bool left_bh_decreased) {
                 make_black(brothers_red_son);
 
                 // Поворотики
+                Node*& parent_ref = get_ref_to_node(parent);
                 if (left_bh_decreased) {
-                    left_rotation(parent);
+                    left_rotation(parent_ref);
                 } else {
-                    right_rotation(parent);
+                    right_rotation(parent_ref);
                 }
+
                 return;
 
             } else { // Подслучай 3.2
-                std::cout << "HEre2" << std::endl;
+                // std::cout << "HEre2" << std::endl;
                 // Это s1 в конспекте.
                 // Это сын, который находится с той же стороны относительно brother,
                 // как и поддерево, в котором уменьшилась bh, относительно parent.
@@ -326,19 +341,25 @@ void RB::erase_fixup(Node* parent, bool left_bh_decreased) {
                 make_black(brother_red_son);
                 make_red(brother);
 
+                Node*& brother_ref = get_ref_to_node(brother);
                 if (left_bh_decreased) {
-                    right_rotation(brother);
+                    right_rotation(brother_ref);
                 } else {
-                    left_rotation(brother);
+                    left_rotation(brother_ref);
                 }
             }
         }
 
     }
-    
+}
 
+RB::Node*& RB::get_ref_to_node(Node* node) {
+    Node* parent = make_normal_ptr(node->parent);
 
-    
+    if (!parent) {
+        return root;
+    }
+    return parent->left == node ? parent->left : parent->right;
 }
 
 void RB::print_tree(std::ostream& os, Node* node, size_t tabs) {
@@ -488,7 +509,6 @@ void RB::delete_tree(Node* node) {
     if (!node) {
         return;
     }
-
 
     if (node->left) {
         delete_tree(node->left);
