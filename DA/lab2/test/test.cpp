@@ -620,7 +620,7 @@ TEST(TestFixupWithRandomInsertionAndErase, RandomInsertAndErase) {
         ASSERT_TRUE(tree.is_correct_tree());  // assert
 
         if (int a = std::rand() % 5; a == 0) {
-            tree.erase(std::rand() % 1000);
+            tree.erase(std::rand() % 1000);   // act
         }
 
         ASSERT_TRUE(tree.is_correct_tree());  // assert
@@ -631,60 +631,4 @@ TEST(TestFixupWithRandomInsertionAndErase, RandomInsertAndErase) {
 int main(int argc, char* argv[]) {
     testing::InitGoogleTest(&argc, argv);
 	return RUN_ALL_TESTS();
-
-    // using namespace std;
-    // RB::RB tree;
-    // vector<pair<int, int>> data;
-    // std::srand(0);
-
-    // bool status = false;
-	// for (size_t i = 0; i < 100000; ++i) {
-    //     int to_in = std::rand() % 1000;
-
-    //     std::cout << "Before insertion" << endl;
-    //     std::cout << tree << std::endl;
-        
-    //     cout << "inserting " << to_in << endl;
-    //     tree.insert(to_in);     // act
-    //     data.push_back({to_in, 1});
-
-    //     std::cout << "................................................................" << std::endl;
-    //     std::cout << "After insertion" << endl;
-    //     std::cout << tree << std::endl;
-
-    //     if (!tree.is_correct_tree()) {
-    //         std::cout << "Here1 " << std::endl;
-    //         status = true;
-    //         break;
-    //     }
-        
-        
-    //     if (int a = std::rand() % 5; a == 0) {
-    //         int to_delete = std::rand() % 1000;
-
-    //         std::cout << "................................................................" << std::endl;
-    //         std::cout << "erasing " <<  to_delete << std::endl;
-    //         tree.erase(to_delete);
-    //         data.push_back({to_delete, -1});
-
-    //         std::cout << "After erasing" << endl;
-    //         std::cout << tree << std::endl;
-    //     }
-
-    //     std::cout << "_________________________________________________________________" << std::endl;
-
-    //     if (!tree.is_correct_tree()) {
-    //         std::cout << "Here2 " << std::endl;
-    //         status = true;
-    //         break;
-    //     }
-    // }
-
-    // if (status) {
-    //     cout << "vector" << endl;
-
-    //     for (auto i : data) {
-    //         cout << i.first << ' ' << i.second << endl;
-    //     }
-    // }
 }
