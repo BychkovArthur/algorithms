@@ -1,27 +1,64 @@
 #include <iostream>
 #include <vector>
 
-#include "rb.hpp"
-using namespace std;
-/*
-    TODO:
-
-    3) Надо ли сделать size inline???
-    5) ??? Сделать константными contains и find
-    6) Красиво задокументировать методы
-
-    7) Надо что то сделать с методами для тестирования. В классе их оставлять как то глупо.
-
-
-    1) Конструкторы для Node ++++
-    2) Не хранить is_black, вместо этого использовать биты указателей. +++++
-    4) добавить проверку на null для is_black, вынести это из node. +
-    8) Проверять значение родителей. ++++
-    9) Заменить присваивание цвета на метод +++
-*/
-
-
 namespace RB {
+
+class RB {
+private:
+    struct Node {
+    public:
+        int val;
+        Node* left;
+        Node* right;
+        Node* parent;
+        
+        Node();
+        Node(int val);
+        Node(int val, Node* parent);
+        Node(int val, Node* parent, bool is_black);
+
+        ~Node() = default;
+    };
+    Node* root;
+    size_t sz;
+
+    /**
+     * Нахождение вершины, где должно быть указанное значение.
+     *
+     * @param val Значение, которое необходимо найти.
+     * @return `pair<Node*& place, Node* parent>` where `parent` - parent for place where `val` must be,
+     * `place` - `root` or `parent->left` if `perent->left->val == val` else `parent->right`
+     */
+    std::pair<Node*&, Node*> find(int val); // MB CONST
+
+    std::pair<Node*&, Node*> find_left_max(Node* root) const;
+
+    static void left_rotation(Node*& node);
+    static void right_rotation(Node*& node);
+
+    static bool is_black(Node* node);
+    static bool is_red(Node* node);
+    static void make_red(Node* node);
+    static void make_black(Node* node);
+    static Node* make_normal_ptr(Node* ptr);
+    static void set_parent(Node* child, Node* parent);
+
+    Node*& get_ref_to_node(Node* node);
+
+    void insert_fixup(Node* node);
+    void erase_fixup(Node* parent, bool left_bh_decreased);
+    void delete_tree(Node* node);
+public:
+
+    RB();
+    ~RB();
+
+    bool contains(int val); // MB CONST
+    bool insert(int val);
+    bool erase(int val);
+    size_t size() const;
+    bool empty() const;
+};
 
 /*
     NODE
@@ -337,49 +374,6 @@ RB::Node*& RB::get_ref_to_node(Node* node) {
     return parent->left == node ? parent->left : parent->right;
 }
 
-void RB::print_tree(std::ostream& os, Node* node, size_t tabs) {
-    if (!node) {
-        return;
-    }
-
-    print_tree(os, node->right, tabs + 1);
-    for (size_t i = 0; i < tabs; ++i) {
-        os << '\t';
-    }
-
-    if (is_red(node)) {
-        os << "\e[1;31m";
-    }
-    if (make_normal_ptr(node->parent)) {
-        os << "(p=" << make_normal_ptr(node->parent)->val << ")";
-    }
-    os << "(v=" << node->val << ')';
-    if (is_red(node)) {
-        std::cout << "\e[0m";
-    }
-    std::cout << '\n';
-
-    print_tree(os, node->left, tabs + 1);
-}
-
-std::ostream& operator<<(std::ostream& os, const RB& tree) {
-    RB::print_tree(os, tree.root, 0);
-    return os;
-}
-
-void RB::get_nodes_in_NLR_traversal_order(std::vector<RB::Node*>& vct) {
-    get_nodes_in_NLR_traversal_order(vct, root);
-}
-
-void RB::get_nodes_in_NLR_traversal_order(std::vector<RB::Node*>& vct, Node* node) {
-    if (!node) {
-        return;
-    }
-    vct.push_back(node);
-    get_nodes_in_NLR_traversal_order(vct, node->left);
-    get_nodes_in_NLR_traversal_order(vct, node->right);
-}
-
 void RB::left_rotation(Node*& node) {
     Node* a = node;                     // Это как в конспекте. Эти вершины обязательно должны быть.
     Node* b = node->right;              // Это как в конспекте. Эти вершины обязательно должны быть.
@@ -450,31 +444,6 @@ inline void RB::set_parent(Node* child, Node* parent) {
     }
 }
 
-bool RB::is_correct_tree() {
-    if (!is_black(root)) {
-        return false;
-    }
-    std::unordered_set<int> st;
-    return is_correct_tree(root, st, 0) && st.size() == 1;
-}
-
-bool RB::is_correct_tree(Node* node, std::unordered_set<int>& st, int cnt) {
-    if (!node) {
-        st.insert(cnt);
-        return true;
-    }
-
-    if (is_red(node) && is_red(make_normal_ptr(node->parent))) {
-        return false;
-    }
-
-    if (is_black(node)) {
-        ++cnt;
-    }
-    
-    return is_correct_tree(node->left, st, cnt) && is_correct_tree(node->right, st, cnt);
-}
-
 RB::~RB() {
     delete_tree(root);
 }
@@ -509,4 +478,12 @@ void RB::delete_tree(Node* node) {
     TREE
     ______________________________________________________________________________________________________________________________________
 */
+
 };
+
+using namespace std;
+
+int main() {
+
+    cout << "ok" << endl;
+}

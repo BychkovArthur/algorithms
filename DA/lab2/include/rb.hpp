@@ -73,8 +73,8 @@ public:
     ~RB();
 
     bool contains(int val); // MB CONST
-    void insert(int val);
-    void erase(int val);
+    bool insert(int val);
+    bool erase(int val);
     size_t size() const;
     bool empty() const;
     
