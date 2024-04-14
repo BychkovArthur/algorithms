@@ -60,10 +60,15 @@ private:
     static void set_parent(Node* child, Node* parent);
 
     void insert_fixup(Node* node);
+    void erase_fixup(Node* parent);
     bool is_correct_tree(Node* node, std::unordered_set<int>& st, int cnt);
+
+
+    void delete_tree(Node* node);
 public:
 
     RB();
+    ~RB();
 
     bool contains(int val); // MB CONST
     void insert(int val);

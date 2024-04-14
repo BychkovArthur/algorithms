@@ -98,7 +98,7 @@ void RB::insert(int val) {
     if (!place.first) {
         place.first = new Node(val, place.second);
         ++sz;
-        insert_fixup(place.first);
+        // insert_fixup(place.first);
     }
 }
 
@@ -155,7 +155,7 @@ void RB::insert_fixup(Node* node) {
     make_black(root);
 }
 
-std::pair<RB::Node*&, RB::Node*> RB::find_left_max(Node* root) const { // Здесь надо сделать так же по красоте, как с обычным find. Надо сделать через ссылку.
+std::pair<RB::Node*&, RB::Node*> RB::find_left_max(Node* root) const {
     if (!root->left->right) {
         return {root->left, root};
     }
@@ -180,6 +180,14 @@ void RB::erase(int val) {
     }
 
     if (!to_delete->left && !to_delete->right) {
+        bool need_fixup = false;
+        bool left_bh_decreased = false;
+        // В случае если parent = NULL, то мы удаляем корень, никакие балансировки не нужны.
+        if (is_black(to_delete) && new_parent) { // Случай 4 балансировки. Определяем с какой стороны у нашего отца необходима балансировка.
+            need_fixup = true;
+            left_bh_decreased = new_parent->left == to_delete ? true : false;
+        }
+
         delete to_delete;
         to_delete = nullptr;
 
@@ -189,24 +197,45 @@ void RB::erase(int val) {
         set_parent(to_delete, new_parent);
         delete deleted_node;
 
+        make_black(to_delete); // Балансировка, случай 3.
+
     } else if (to_delete->left && !to_delete->right) { 
         Node* deleted_node = to_delete;
         to_delete = to_delete->left;
         set_parent(to_delete, new_parent);
         delete deleted_node;
 
+        make_black(to_delete); // Балансировка, случай 3.
+
     } else {
+        bool need_fixup = false;
+        bool left_bh_decreased = false;
+
         std::pair<Node*&, Node*> place = find_left_max(to_delete);
         Node* to_delete_new = place.first;
-        std::swap(to_delete_new->val, to_delete->val);
-        place.first = to_delete_new->left;
+
+        std::swap(place.first->val, to_delete->val);
+        place.first = place.first->left;
         if (place.first) {
             set_parent(place.first, place.second);
-            delete to_delete_new;
+            
+            make_black(to_delete); // Балансировка, случай 3.
+
+        // Иначе, у удаляемой вершины нет детей. Значит возможны случаи 1 и 4.
+        // Здесь в отличие от самого первого ифа (когда мы проверяем, что нет детей вообще) всегда будет родитель.
+        } else if (is_black(to_delete_new)) {
+            need_fixup = true;
+            left_bh_decreased = place.second->left == to_delete_new ? true : false;
         }
+
+        delete to_delete_new;
     }
 
     --sz;
+}
+
+void RB::erase_fixup(Node* parent) {
+
 }
 
 void RB::print_tree(std::ostream& os, Node* node, size_t tabs) {
@@ -345,6 +374,37 @@ bool RB::is_correct_tree(Node* node, std::unordered_set<int>& st, int cnt) {
     }
     
     return is_correct_tree(node->left, st, cnt) && is_correct_tree(node->right, st, cnt);
+}
+
+RB::~RB() {
+    delete_tree(root);
+}
+
+void RB::delete_tree(Node* node) {
+
+    if (!node) {
+        return;
+    }
+
+
+    if (node->left) {
+        delete_tree(node->left);
+    }
+
+    if (node->right) {
+        delete_tree(node->right);
+    }
+
+    Node* parent = make_normal_ptr(node->parent);
+    if (parent) {
+        if (parent->left == node) {
+            parent->left = nullptr;
+        } else {
+            parent->right = nullptr;
+        }
+    }
+    delete node;
+
 }
 
 /*
