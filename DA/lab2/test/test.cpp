@@ -38,7 +38,14 @@ void insert_input_values(std::vector<int>& vct, RB& tree) {
 
 void erase_values(std::vector<int>& vct, RB& tree) {
     for (size_t i = 0; i < vct.size(); ++i) {
+        std::cout << "Erasing " << vct[i] << std::endl;
+        std::cout << "Before erase " << std::endl;
+        std::cout << tree << std::endl;
         tree.erase(vct[i]);
+        std::cout << "............................................................." << std::endl;
+        std::cout << "After erase " << std::endl;
+        std::cout << tree << std::endl;
+        std::cout << "_____________________________________________________________" << std::endl;
     }
 }
 

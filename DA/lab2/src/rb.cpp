@@ -98,7 +98,7 @@ void RB::insert(int val) {
     if (!place.first) {
         place.first = new Node(val, place.second);
         ++sz;
-        // insert_fixup(place.first);
+        insert_fixup(place.first);
     }
 }
 
@@ -185,7 +185,7 @@ void RB::erase(int val) {
         // В случае если parent = NULL, то мы удаляем корень, никакие балансировки не нужны.
         if (is_black(to_delete) && new_parent) { // Случай 4 балансировки. Определяем с какой стороны у нашего отца необходима балансировка.
             need_fixup = true;
-            left_bh_decreased = new_parent->left == to_delete ? true : false;
+            left_bh_decreased = new_parent->left == to_delete;
         }
 
         delete to_delete;
@@ -218,23 +218,30 @@ void RB::erase(int val) {
         std::pair<Node*&, Node*> place = find_left_max(to_delete);
         Node* to_delete_new = place.first;
 
+
+        // У удаляемой вершины нет детей. Значит возможны случаи 1 и 4.
+        // Здесь в отличие от самого первого ифа (когда мы проверяем, что нет детей вообще) всегда будет родитель.
+        if (is_black(to_delete_new) && !to_delete_new->left) {
+            need_fixup = true;
+            left_bh_decreased = place.second->left == to_delete_new;
+        }
+
+        std::cout << place.second->val << std::endl;
+
         std::swap(place.first->val, to_delete->val);
+        std::cout << place.second->val << std::endl;
         place.first = place.first->left;
         if (place.first) {
             set_parent(place.first, place.second);
             
             make_black(to_delete); // Балансировка, случай 3.
-
-        // Иначе, у удаляемой вершины нет детей. Значит возможны случаи 1 и 4.
-        // Здесь в отличие от самого первого ифа (когда мы проверяем, что нет детей вообще) всегда будет родитель.
-        } else if (is_black(to_delete_new)) {
-            need_fixup = true;
-            left_bh_decreased = place.second->left == to_delete_new ? true : false;
         }
 
         delete to_delete_new;
 
         if (need_fixup) {
+            std::cout << "HErelkjlkjjkl" << std::endl;
+            std::cout << place.second->val << std::endl;
             erase_fixup(place.second, left_bh_decreased);
         }
     }
@@ -243,7 +250,95 @@ void RB::erase(int val) {
 }
 
 void RB::erase_fixup(Node* parent, bool left_bh_decreased) {
-    return;
+    // Изначально parent 100% не корень
+    
+    while (true) {
+        Node* brother = left_bh_decreased ? parent->right : parent->left;
+
+        std::cout << "side = " << left_bh_decreased<< std::endl;
+
+        if (is_red(brother)) { // Случай 4, подслучай 2. Брат - красный.
+        
+            make_red(parent);
+            make_black(brother);
+            if (left_bh_decreased) {
+                left_rotation(parent);
+            } else {
+                right_rotation(parent);
+            }
+
+            // По идее, этого делать даже не надо, т.к. на следующей итерации будет верный брат
+            // brother = left_bh_decreased ? parent->right : parent->left;
+        
+        } else { // Случай 4, подслучай 3. Брат - черный.
+
+            std::cout << "HEre0" << std::endl;
+            std::cout << parent->val << ' ' << std::endl;
+            std::cout << brother->left << std::endl;
+            std::cout << "HEre0" << std::endl;
+            if (is_black(brother->left) && is_black(brother->right)) { // Подслучай 3.1
+                std::cout << "HEre1" << std::endl;
+                bool parent_was_red = is_red(parent);
+                
+                make_red(brother);
+                make_black(parent);
+
+                if (parent_was_red) { // Подслучай 3.1.1
+                    return;
+                } else {              // Подслучай 3.1.2
+                    Node* new_parent = make_normal_ptr(parent->parent);
+
+                    if (!new_parent) { // Нет родителя -> parent - корень. Значит, во всем дереве уменишьлась черная высота.
+                        return;
+                    }
+                    left_bh_decreased = new_parent->left == parent;
+                    parent = new_parent;
+                }
+            
+            // brothers_red_son это вершина s2 в конспекте
+            } else if (Node* brothers_red_son = left_bh_decreased ? brother->right : brother->left; is_red(brothers_red_son)) { // Подслучай 3.3.
+                // Перекраска всех
+                std::cout << "HEre3" << std::endl;
+                bool parent_was_black = is_black(parent);
+                if (parent_was_black) {
+                    make_black(brother);
+                } else {
+                    make_red(brother);
+                }
+                make_black(parent);
+                make_black(brothers_red_son);
+
+                // Поворотики
+                if (left_bh_decreased) {
+                    left_rotation(parent);
+                } else {
+                    right_rotation(parent);
+                }
+                return;
+
+            } else { // Подслучай 3.2
+                std::cout << "HEre2" << std::endl;
+                // Это s1 в конспекте.
+                // Это сын, который находится с той же стороны относительно brother,
+                // как и поддерево, в котором уменьшилась bh, относительно parent.
+                Node* brother_red_son = left_bh_decreased ? brother->left : brother->right;
+
+                make_black(brother_red_son);
+                make_red(brother);
+
+                if (left_bh_decreased) {
+                    right_rotation(brother);
+                } else {
+                    left_rotation(brother);
+                }
+            }
+        }
+
+    }
+    
+
+
+    
 }
 
 void RB::print_tree(std::ostream& os, Node* node, size_t tabs) {
