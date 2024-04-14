@@ -191,6 +191,10 @@ void RB::erase(int val) {
         delete to_delete;
         to_delete = nullptr;
 
+        if (need_fixup) {
+            erase_fixup(new_parent, left_bh_decreased);
+        }
+
     } else if (!to_delete->left && to_delete->right) {
         Node* deleted_node = to_delete;
         to_delete = to_delete->right;
@@ -229,13 +233,17 @@ void RB::erase(int val) {
         }
 
         delete to_delete_new;
+
+        if (need_fixup) {
+            erase_fixup(place.second, left_bh_decreased);
+        }
     }
 
     --sz;
 }
 
-void RB::erase_fixup(Node* parent) {
-
+void RB::erase_fixup(Node* parent, bool left_bh_decreased) {
+    return;
 }
 
 void RB::print_tree(std::ostream& os, Node* node, size_t tabs) {

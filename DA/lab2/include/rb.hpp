@@ -60,7 +60,7 @@ private:
     static void set_parent(Node* child, Node* parent);
 
     void insert_fixup(Node* node);
-    void erase_fixup(Node* parent);
+    void erase_fixup(Node* parent, bool left_bh_decreased);
     bool is_correct_tree(Node* node, std::unordered_set<int>& st, int cnt);
 
 
