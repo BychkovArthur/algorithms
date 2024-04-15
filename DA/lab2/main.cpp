@@ -1,21 +1,46 @@
 #include <iostream>
-#include <vector>
+#include <string>
+#include <fstream>
+#include <cstdint>
 
 namespace RB {
+
+/*
+    COMPARISON OPERATORS
+    ______________________________________________________________________________________________________________________________________
+*/
+
+bool operator<(const std::pair<std::string, uint64_t>& a, const std::pair<std::string, uint64_t>& b) {
+    return a.first < b.first;
+}
+
+bool operator>(const std::pair<std::string, uint64_t>& a, const std::pair<std::string, uint64_t>& b) {
+    return b < a;
+}
+
+bool operator==(const std::pair<std::string, uint64_t>& a, const std::pair<std::string, uint64_t>& b) {
+    return a.first == b.first;
+}
+
+/*
+    COMPARISON OPERATORS
+    ______________________________________________________________________________________________________________________________________
+*/
 
 class RB {
 private:
     struct Node {
     public:
-        int val;
+        std::pair<std::string, uint64_t> val;
         Node* left;
         Node* right;
         Node* parent;
         
         Node();
-        Node(int val);
-        Node(int val, Node* parent);
-        Node(int val, Node* parent, bool is_black);
+        Node(const std::pair<std::string, uint64_t>& val);
+        Node(const std::pair<std::string, uint64_t>& val, bool is_black);
+        Node(const std::pair<std::string, uint64_t> &val, Node* parent);
+        Node(const std::pair<std::string, uint64_t>& val, Node* parent, bool is_black);
 
         ~Node() = default;
     };
@@ -29,7 +54,7 @@ private:
      * @return `pair<Node*& place, Node* parent>` where `parent` - parent for place where `val` must be,
      * `place` - `root` or `parent->left` if `perent->left->val == val` else `parent->right`
      */
-    std::pair<Node*&, Node*> find(int val); // MB CONST
+    std::pair<Node*&, Node*> find(const std::pair<std::string, uint64_t>& val); // MB CONST
 
     std::pair<Node*&, Node*> find_left_max(Node* root) const;
 
@@ -48,16 +73,31 @@ private:
     void insert_fixup(Node* node);
     void erase_fixup(Node* parent, bool left_bh_decreased);
     void delete_tree(Node* node);
+
+    void serialize(std::fstream& file, Node* node);
+    Node* deserialize(std::fstream& file);
+
+    enum class SERIALIZE_TYPE : int8_t {
+        NULLPTR,
+        BLACK,
+        RED
+    };
+
+
 public:
 
     RB();
     ~RB();
 
-    bool contains(int val); // MB CONST
-    bool insert(int val);
-    bool erase(int val);
+    bool contains(const std::pair<std::string, uint64_t>& val); // MB CONST
+    bool insert(const std::pair<std::string, uint64_t>& val);
+    bool erase(const std::pair<std::string, uint64_t>& val);
+    uint64_t operator[](const std::string& str);
     size_t size() const;
     bool empty() const;
+
+    bool serialize(const std::string& filename);
+    bool deserialize(const std::string& filename);
 };
 
 /*
@@ -65,10 +105,15 @@ public:
     ______________________________________________________________________________________________________________________________________
 */
 
-RB::Node::Node() : val(0), left(nullptr), right(nullptr), parent(nullptr) {}
-RB::Node::Node(int val) : val(val), left(nullptr), right(nullptr), parent(nullptr) {}
-RB::Node::Node(int val, Node* parent) : val(val), left(nullptr), right(nullptr), parent(parent) {}
-RB::Node::Node(int val, Node* parent, bool is_black) : val(val), left(nullptr), right(nullptr), parent(parent) {
+RB::Node::Node() : left(nullptr), right(nullptr), parent(nullptr) {}
+RB::Node::Node(const std::pair<std::string, uint64_t>& val) : val(val), left(nullptr), right(nullptr), parent(nullptr) {}
+RB::Node::Node(const std::pair<std::string, uint64_t>& val, Node* parent) : val(val), left(nullptr), right(nullptr), parent(parent) {}
+RB::Node::Node(const std::pair<std::string, uint64_t>& val, Node* parent, bool is_black) : val(val), left(nullptr), right(nullptr), parent(parent) {
+    if (is_black) {
+        make_black(this);
+    }
+}
+RB::Node::Node(const std::pair<std::string, uint64_t>& val, bool is_black) : val(val), left(nullptr), right(nullptr), parent(nullptr) {
     if (is_black) {
         make_black(this);
     }
@@ -96,7 +141,7 @@ bool RB::empty() const {
     return sz == 0;
 }
 
-std::pair<RB::RB::Node*&, RB::RB::Node*> RB::find(int val) {
+std::pair<RB::RB::Node*&, RB::RB::Node*> RB::find(const std::pair<std::string, uint64_t>& val) {
 
     if (!root || root->val == val) {
         return {root, nullptr};
@@ -126,11 +171,11 @@ std::pair<RB::RB::Node*&, RB::RB::Node*> RB::find(int val) {
     }
 }
 
-bool RB::contains(int val) {
+bool RB::contains(const std::pair<std::string, uint64_t>& val) {
     return find(val).first;
 }
 
-bool RB::insert(int val) {
+bool RB::insert(const std::pair<std::string, uint64_t>& val) {
     std::pair<Node*&, Node*> place = find(val);
     if (!place.first) {
         place.first = new Node(val, place.second);
@@ -209,7 +254,7 @@ std::pair<RB::Node*&, RB::Node*> RB::find_left_max(Node* root) const {
     return {prev->right, prev};
 }
 
-bool RB::erase(int val) {
+bool RB::erase(const std::pair<std::string, uint64_t>& val) {
     std::pair<Node*&, Node*> place = find(val);
     Node*& to_delete = place.first;
     Node* new_parent = place.second;
@@ -474,6 +519,113 @@ void RB::delete_tree(Node* node) {
 
 }
 
+uint64_t RB::operator[](const std::string& str) {
+    std::pair<Node*&, Node*> place = find({str, 0ULL});
+
+    if (!place.first) {
+        throw std::invalid_argument("Key not found");
+    }
+
+    return place.first->val.second;
+}
+
+bool RB::serialize(const std::string& filename) {
+    std::fstream file;
+
+    file.open(filename, std::ios::binary | std::ios::out | std::ios::trunc);
+    // if (file.fail()) {
+    //     return false;
+    // }
+
+    serialize(file, root);
+
+    file.close();
+    return true;
+}
+
+void RB::serialize(std::fstream& file, Node* node) {
+
+    SERIALIZE_TYPE type = SERIALIZE_TYPE::NULLPTR;
+
+    if (!node) {
+        file.write(reinterpret_cast<char*>(&type), sizeof(type));
+        return;
+    }
+
+    type = is_black(node) ? SERIALIZE_TYPE::BLACK : SERIALIZE_TYPE::RED;
+    size_t string_size = node->val.first.size();
+
+    file.write(reinterpret_cast<char*>(&type), sizeof(type));
+    file.write(reinterpret_cast<char*>(&string_size), sizeof(string_size));
+    file.write(node->val.first.c_str(), string_size);
+    file.write(reinterpret_cast<char*>(&node->val.second), sizeof(node->val.second));
+
+    if (node->left) {
+        serialize(file, node->left);
+    } else {
+        type = SERIALIZE_TYPE::NULLPTR;
+        file.write(reinterpret_cast<char*>(&type), sizeof(type));
+    }
+
+    if (node->right) {
+        serialize(file, node->right);
+    } else {
+        type = SERIALIZE_TYPE::NULLPTR;
+        file.write(reinterpret_cast<char*>(&type), sizeof(type));
+    }
+}
+
+bool RB::deserialize(const std::string& filename) {
+    std::fstream file;
+    file.open(filename, std::ios::binary | std::ios::in);
+
+    
+    // if (file.fail()) {
+    //     return false;
+    // }
+
+    delete_tree(root);
+    root = deserialize(file);
+
+    file.close();
+    return true;
+}
+
+RB::Node* RB::deserialize(std::fstream& file) {
+    SERIALIZE_TYPE type;
+    
+    file.read(reinterpret_cast<char*>(&type), sizeof(SERIALIZE_TYPE));
+
+    if (type == SERIALIZE_TYPE::NULLPTR) {
+        return nullptr;
+    }
+
+    ++sz;
+
+    size_t string_size;
+    std::string key;
+    uint64_t val;
+
+    file.read(reinterpret_cast<char*>(&string_size), sizeof(string_size));
+    key.resize(string_size);
+    file.read(key.data(), string_size);
+    file.read(reinterpret_cast<char*>(&val), sizeof(val));
+
+    Node* node = new Node({key, val}, type == SERIALIZE_TYPE::BLACK);
+    node->left = deserialize(file);
+    node->right = deserialize(file);
+
+    if (node->left) {
+        set_parent(node->left, node);
+    }
+
+    if (node->right) {
+        set_parent(node->right, node);
+    }
+
+    return node;
+}
+
 /*
     TREE
     ______________________________________________________________________________________________________________________________________
@@ -481,9 +633,78 @@ void RB::delete_tree(Node* node) {
 
 };
 
+
 using namespace std;
 
-int main() {
+void lower(string& s) {
+    for (char& c : s) {
+        c = tolower(c);
+    }
+}
 
-    cout << "ok" << endl;
+int main() {
+    RB::RB tree;
+
+    string input1, input2, input3;
+
+    while (cin >> input1) {
+
+        if (input1.size() == 1 && input1[0] == '+') {
+            cin >> input2 >> input3;
+            uint64_t val = stoull(input3);
+
+            lower(input2);
+
+            if (tree.insert({input2, val})) {
+                cout << "OK" << '\n';
+            } else {
+                cout << "Exist" << '\n';
+            }
+
+        } else if (input1.size() == 1 && input1[0] == '-') {
+            cin >> input2;
+            lower(input2);
+
+            if (tree.erase({input2, 0ULL})) {
+                cout << "OK" << '\n';
+
+            } else {
+                cout << "NoSuchWord" << '\n';
+            }
+
+        } else if (input1.size() == 1 && input1[0] == '!') {
+            cin >> input2 >> input3;
+
+            bool success = false;
+            
+            if (input2 == "Save") {
+                if (tree.serialize(input3)) {
+                    success = true;
+                }
+            } else {
+                if (tree.deserialize(input3)) {
+                    success = true;
+                }
+            }
+
+            cout << "OK" << '\n';
+
+            // if (success) {
+            //     cout << "OK" << '\n';
+            // } else {
+            //     cout << "ERROR: file fail" << '\n';
+            // }
+
+        } else {
+
+            lower(input1);
+            try {
+                uint64_t res = tree[input1];
+                cout << "OK: " << res << '\n';
+            
+            } catch(const std::exception& e) {
+                cout << "NoSuchWord" << '\n';
+            }
+        }
+    }
 }
