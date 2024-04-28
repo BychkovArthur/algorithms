@@ -660,9 +660,9 @@ int main() {
     RB::RB mp1;
     map<string, uint64_t> mp2;
 
-    ifstream fin("report/benchmark_input.txt");
-    ofstream outpu1("report/RB_output.txt", ios::trunc);
-    ofstream outpu2("report/map_output.txt", ios::trunc);
+    ifstream fin("benchmark_input.txt");
+    ofstream outpu1("RB_output.txt", ios::trunc);
+    ofstream outpu2("map_output.txt", ios::trunc);
     string input1;
 
     vector<pair<pair<string, string>, string>> input;
@@ -717,46 +717,50 @@ int main() {
     auto time = chrono::duration_cast<chrono::milliseconds>(end - start);
     cout << "Time RB: " << time.count() << " ms" << endl;
 
-    start = chrono::steady_clock::now();
+    // start = chrono::steady_clock::now();
 
-    for (size_t i = 0; i < input.size(); ++i) {
-        string& input1 = input[i].first.first;
-        string& input2 = input[i].first.second;
-        string& input3 = input[i].second;
+    // for (size_t i = 0; i < input.size(); ++i) {
+    //     string& input1 = input[i].first.first;
+    //     string& input2 = input[i].first.second;
+    //     string& input3 = input[i].second;
 
-        if (input1.size() == 1 && input1[0] == '+') {
-            uint64_t val = stoull(input3);
+    //     if (input1.size() == 1 && input1[0] == '+') {
+    //         uint64_t val = stoull(input3);
 
-            lower(input2);
+    //         lower(input2);
 
-            if (mp2.insert({input2, val}).second) {
-                outpu2 << "OK" << '\n';
-            } else {
-                outpu2 << "Exist" << '\n';
-            }
+    //         if (mp2.insert({input2, val}).second) {
+    //             outpu2 << "OK" << '\n';
+    //         } else {
+    //             outpu2 << "Exist" << '\n';
+    //         }
 
-        } else if (input1.size() == 1 && input1[0] == '-') {
-            lower(input2);
+    //     } else if (input1.size() == 1 && input1[0] == '-') {
+    //         lower(input2);
 
-            if (mp2.erase(input2)) {
-                outpu2 << "OK" << '\n';
-            } else {
-                outpu2 << "NoSuchWord" << '\n';
-            }
-        } else {
+    //         if (mp2.erase(input2)) {
+    //             outpu2 << "OK" << '\n';
+    //         } else {
+    //             outpu2 << "NoSuchWord" << '\n';
+    //         }
+    //     } else {
 
-            lower(input1);
+    //         lower(input1);
 
-            if (auto elem = mp2.find(input1); elem != mp2.end()) {
-                outpu2 << "OK: " << elem->second << '\n';
-            } else {
-                outpu2 << "NoSuchWord" << '\n';
-            }
-        }
-    }
-    end = chrono::steady_clock::now();
-    time = chrono::duration_cast<chrono::milliseconds>(end - start);
-    cout << "Time std::map: " << time.count() << " ms" << endl;
+    //         if (auto elem = mp2.find(input1); elem != mp2.end()) {
+    //             outpu2 << "OK: " << elem->second << '\n';
+    //         } else {
+    //             outpu2 << "NoSuchWord" << '\n';
+    //         }
+    //     }
+    // }
+    // end = chrono::steady_clock::now();
+    // time = chrono::duration_cast<chrono::milliseconds>(end - start);
+    // cout << "Time std::map: " << time.count() << " ms" << endl;
+
+    fin.close();
+    outpu1.close();
+    outpu2.close();
 
     return 0;
 }
