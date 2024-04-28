@@ -9,11 +9,13 @@ add_compile_options(-g -rdynamic)
 set(INCLUDE_DIR include)
 set(SOURCE_DIR src)
 set(TEST_DIR test)
+set(REPORT_DIR report)
 
 include_directories(${INCLUDE_DIR})
 
 file(GLOB_RECURSE SOURCES LIST_DIRECTORIES false ${SOURCE_DIR}/*.cpp)
 file(GLOB_RECURSE TEST_SOURCES LIST_DIRECTORIES false ${TEST_DIR}/*.cpp)
+file(GLOB_RECURSE REPORT_SOURCES LIST_DIRECTORIES false ${REPORT_DIR}/*.cpp)
 
 add_library(${CMAKE_PROJECT_NAME}_lib ${SOURCES})
 
@@ -21,6 +23,7 @@ enable_testing()
 find_package(GTest REQUIRED)
 
 add_executable(${CMAKE_PROJECT_NAME}_test ${TEST_SOURCES})
+add_executable(${CMAKE_PROJECT_NAME}_benchmark ${REPORT_SOURCES})
 target_link_libraries(${CMAKE_PROJECT_NAME}_test ${CMAKE_PROJECT_NAME}_lib GTest::gtest GTest::gtest_main)
 
 add_test(AllTestsInFoo foo)

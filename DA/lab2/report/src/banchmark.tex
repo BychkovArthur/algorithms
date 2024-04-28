@@ -1,0 +1,43 @@
+\section{Тест производительности}
+
+
+Тест производительности представляет из себя следующее: случайная вставка/удаление/поиск в словаре. Входные данные сгенерированы случайным образом. Всего $1000000$ строк во входном файле. В качестве ключа выступает случайная строка длины от 1 до 5 символов, состаящая только из латинских строчных букв. В качестве значения - число от 0 до 1000. Файл сгенерирован следующей программой:
+\begin{lstlisting}[language=python]
+from random import randint, choices, choice
+from string import ascii_lowercase, ascii_uppercase, digits
+
+def string_gen(strlen : int = 10, alphabet : str = ascii_lowercase):
+    return ''.join(choices(alphabet, k=strlen))
+
+with open("benchmark_input.txt", "w") as file:
+    
+    for _ in range(1_000_000):
+        operation_type = choice(['?', '+', '-'])
+        
+        strlen = randint(1, 5)
+        string = string_gen(strlen)
+        
+        if operation_type == '?':
+            file.write(f'? {string}')
+            
+        elif operation_type == '+':
+            value = randint(0, 1000)
+            file.write(f'+ {string} {value}')
+            
+        elif operation_type == '-':
+            file.write(f'- {string}')
+        file.write('\n')
+\end{lstlisting}
+
+\begin{alltt}
+make benchmark
+./build/RB-tree_benchmark
+Time RB: 1652 ms
+Time std::map: 1860 ms
+diff report/map_output.txt report/RB_output.txt
+\end{alltt}
+
+Как видно, моя версия словаря работает быстрее, чем $std::sort$. Изначально у моё дерево работало в $1.5$ раза медленне, чем $std::map$, а именно, приблизительно за $2900 ms$. Это происходило из-за того, что я выбрасывал исключение, если элемент не найден. Заменив выброс исключения на пару из $bool, uint64\_t$ мне получилось в два раза ускорить программу!!! 
+
+\pagebreak
+

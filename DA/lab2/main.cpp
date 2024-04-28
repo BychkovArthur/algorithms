@@ -675,25 +675,14 @@ int main() {
         } else if (input1.size() == 1 && input1[0] == '!') {
             cin >> input2 >> input3;
 
-            bool success = false;
             
             if (input2 == "Save") {
-                if (tree.serialize(input3)) {
-                    success = true;
-                }
+                tree.serialize(input3);
             } else {
-                if (tree.deserialize(input3)) {
-                    success = true;
-                }
+                tree.deserialize(input3);
             }
 
             cout << "OK" << '\n';
-
-            // if (success) {
-            //     cout << "OK" << '\n';
-            // } else {
-            //     cout << "ERROR: file fail" << '\n';
-            // }
 
         } else {
 
