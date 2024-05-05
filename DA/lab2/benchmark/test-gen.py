@@ -6,7 +6,7 @@ def string_gen(strlen : int = 10, alphabet : str = ascii_lowercase):
 
 with open("benchmark_input.txt", "w") as file:
     
-    for _ in range(10_000):
+    for _ in range(1_000_000):
         operation_type = choice(['?', '+', '-'])
         
         strlen = randint(1, 5)
