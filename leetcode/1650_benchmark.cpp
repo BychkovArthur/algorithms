@@ -118,6 +118,20 @@ Node* LCA_my_solution3(Node* p, Node* q) {
     return p;
 }
 
+int CORRECT_getLength(Node *p) {
+    int ans = 0;
+    for (; p->parent; p = p->parent, ++ans);
+    return ans;
+}
+Node* CORRECT_lowestCommonAncestor(Node* p, Node * q) {
+    int a = CORRECT_getLength(p), b = CORRECT_getLength(q);
+    if (a < b) swap(a, b), swap(p, q);
+    a -= b;
+    while (a-- > 0) p = p->parent;
+    while (p != q) p = p->parent, q = q->parent;
+    return p;
+}
+
 Node* add_node(Node* root, int val) {
     Node* node = root;
     while (true) {
@@ -155,6 +169,12 @@ void print(Node* node, int tabs) {
 
 
 int main() {
+
+    /*
+        Референс верного решения взят отсюда
+        https://leetcode.ca/2020-06-06-1650-Lowest-Common-Ancestor-of-a-Binary-Tree-III/
+    */
+
     std::srand(time(NULL));
 
     for (int i = 0; i < 1'000'000; ++i) {
@@ -175,7 +195,8 @@ int main() {
         Node* res1 = LCA_my_solution1(p, q);
         Node* res2 = LCA_my_solution2(p, q);
         Node* res3 = LCA_my_solution3(p, q);
-        if (res1 == res2 && res2 == res3) {
+        Node* res4 = CORRECT_lowestCommonAncestor(p, q);
+        if (res1 == res2 && res1 == res3 && res1 == res4) {
             cout << "Test " << i + 1 << " SUCCESS" << endl;
             // print(root, 0);
             // cout << "P->val = " << p->val << endl;
@@ -190,6 +211,7 @@ int main() {
             cout << "RES1->val = " << res1->val << endl;
             cout << "RES2->val = " << res2->val << endl;
             cout << "RES3->val = " << res3->val << endl;
+            cout << "RES3->val = " << res4->val << endl;
             break;
         }
     }
