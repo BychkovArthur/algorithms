@@ -86,6 +86,7 @@ int main() {
                 cout << input[j].first << ' ' << input[j].second << endl;
             }
         }
+        
     }
 
     
