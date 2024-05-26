@@ -4,13 +4,6 @@
 #include <algorithm>
 #include <iostream>
 
-
-// std::vector<size_t> z_arr;
-// std::vector<size_t> n_arr;
-// std::vector<ssize_t> strong_L_arr;
-// std::vector<ssize_t> strong_l_arr;
-// std::unordered_map<char, std::vector<size_t>> R;
-
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const std::vector<T>& v) {
     for (const T& elem : v) {
@@ -19,156 +12,6 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& v) {
     os << '\n';
     return os;
 }
-
-// void n_func(std::string s) {
-//     size_t n = s.size();
-//     n_arr.resize(n, 0);
-
-//     std::reverse(s.begin(), s.end());
-//     z_func(s);
-
-//     for (size_t i = 0; i < n; ++i) {
-//         n_arr[i] = z_arr[n - i - 1];
-//     }
-
-//     // std::cout << "N-function: " << n_arr << std::endl;
-// }
-
-// void strong_L_func(const std::string& s) {
-//     size_t n = s.size();
-//     strong_L_arr.resize(n, -1);
-
-//     for (size_t j = 0; j < n - 1; ++j) {
-//         if (n_arr[j]) {
-//             size_t i = n - n_arr[j];
-//             strong_L_arr[i] = j;
-//         }
-//     }
-//     // std::cout << "                   ";
-//     // for (int i = 0; i < n; ++i) std::cout << s[i] << "  ";
-//     // std::cout << '\n';
-//     // std::cout << "Strong L-function: " << strong_L_arr << std::endl;
-// }
-
-// void strong_l_func(const std::string& s) {
-//     size_t n = s.size();
-//     strong_l_arr.resize(n, 0);
-//     size_t prev = 0;
-
-//     for (size_t j = 0; j < n; ++j) {
-//         size_t i = n - j - 1;
-//         if (n_arr[j] == j + 1) {
-//             prev = j + 1;
-//         }
-//         strong_l_arr[i] = prev;
-//     }
-
-//     // std::cout << "                   ";
-//     // for (int i = 0; i < n; ++i) std::cout << s[i] << " ";
-//     // std::cout << '\n';
-//     // std::cout << "Strong l-function: " << strong_l_arr << std::endl;
-// }
-
-// void R_func(const std::string& s) {
-//     size_t n = s.size();
-//     for (ssize_t i = n - 1; i >= 0; --i) {
-//         R[s[i]].push_back(i);
-//     }
-// }
-
-// std::vector<ssize_t> boyer_moore(const std::string& text, const std::string& pattern) {
-//     ssize_t n = text.size();
-//     ssize_t p_sz = pattern.size();
-
-//     std::vector<ssize_t> ans;
-
-//     if (p_sz > n) return ans;
-
-//     n_func(pattern);
-//     strong_L_func(pattern);
-//     strong_l_func(pattern);
-//     R_func(pattern);
-    
-//     ssize_t shifted = p_sz - 1;
-//     // std::cout << "M = " << p_sz << " N = " << n << std::endl;
-
-//     while (shifted < n) {
-//         ssize_t pattern_ptr = p_sz - 1;
-//         ssize_t text_ptr = shifted;
-
-//         // std::cout << "pattern_ptr = " << pattern_ptr << " text_ptr = " << text_ptr << std::endl;
-
-//         while (pattern_ptr >= 0 && text[text_ptr] == pattern[pattern_ptr]) {
-//             --pattern_ptr;
-//             --text_ptr;
-//         }
-
-//         // Случай, когда ничего не совпало вообще.
-//         if (pattern_ptr == p_sz - 1) {
-//             shifted += 1;
-//             continue;
-//         }
-
-//         // std::cout << "HERE" << std::endl;
-
-//         // Паттерн совпал полностью
-//         if (pattern_ptr == -1) {
-//             // std::cout << "Index = " << text_ptr + 1 << std::endl;
-//             // std::cout << text_ptr + 1 << '\n';
-//             ans.push_back(text_ptr + 1);
-//             shifted += p_sz - strong_l_arr[1];
-//             // std::cout << "TOTAL" << std::endl;
-//         } else {
-//             // 1) Найдём сдвиг для правила плохого символа
-//             // Мне надо в паттерне найти первый индекс, который
-//             // для буквы text[text_ptr] и такой, что char_ind < pattern_ptr
-//             ssize_t char_ind = 0;
-//             bool char_find = false;
-//             // std::cout << "Не совпал " << text[text_ptr] << " и " << pattern[pattern_ptr] << std::endl;
-//             // std::cout << "R = " << R[text[text_ptr]] << std::endl;
-//             for (ssize_t i = 0; i < R[text[text_ptr]].size(); ++i) { // Была тут ошибка, щёл с конца
-//                 if (R[text[text_ptr]][i] < pattern_ptr) {
-//                     char_ind = R[text[text_ptr]][i];
-//                     char_find = true;
-//                     // std::cout << "finded " << R[text[text_ptr]][i] << std::endl;
-//                     break;
-//                 }
-//             }
-//             ssize_t bad_char_shift = 0;
-//             if (char_find) { // Буква для правила плохого символа найдёна
-//                 // std::cout << "IN CHAR FIND \n\n\n" << std::endl;
-//                 bad_char_shift = pattern_ptr - char_ind; // была тут очень тупая ошибка, писал char_find вместо char_ind
-//             } else {
-//                 bad_char_shift = pattern_ptr + 1;
-//             }
-//             // std::cout << "BAD CHAR SHIFT = " << bad_char_shift << std::endl;
-
-//             // 2) Найдём сдвиг для правила хорошего суффикса
-//             ssize_t good_suffix_shift = 0;
-            
-//             // Была везде тут ошибка, писал strong_L_arr[pattern_ptr] и strong_l_arr[pattern_ptr]
-//             // вместо strong_L_arr[pattern_ptr + 1] и strong_l_arr[pattern_ptr + 1]
-//             if (strong_L_arr[pattern_ptr + 1] != -1) {
-//                 // std::cout << "INSIDE L ARR STRONG" << std::endl;
-//                 good_suffix_shift = p_sz - 1 - strong_L_arr[pattern_ptr + 1];
-
-//             } else if (strong_L_arr[pattern_ptr + 1] == -1) {
-//                 good_suffix_shift = p_sz - strong_l_arr[pattern_ptr + 1];
-//             }
-//             // std::cout << "GOOD SUFFIX = " << good_suffix_shift << std::endl;
-
-//             shifted += std::max(bad_char_shift, good_suffix_shift);
-//         }
-
-//         // std::cout << "SHIFTED = " << shifted << std::endl;
-//     }
-//     z_arr.clear();
-//     n_arr.clear();
-//     strong_L_arr.clear();
-//     strong_l_arr.clear();
-//     R.clear();
-//     return ans;
-// }
 
 std::vector<ssize_t> naive_(const std::string& text, const std::string& pattern) {
     std::vector<ssize_t> ans;
@@ -322,11 +165,11 @@ private:
     
         #ifdef DEBUG
         std::cout << "Внутри Правила Плохого Символа\n";
-        std::cout << "Не совпал T[" << text_ptr << "] = " << text[text_ptr] << " И P[" << pattern_ptr << " = " << pattern[pattern_ptr] << '\n';
-        std::cout << "R = " << R[text[text_ptr]] << '\n';
-        if (char_ind == -1) std::cout << "Символ " << text[text_ptr] << ", который будет левее " << pattern_ptr << " не найден" << '\n';
-        else std::cout << "Символ " << text[text_ptr] << ", который будет левее " << pattern_ptr << " располагается на " << char_ind << '\n';
-        std::cout << "Сдвиг по правилу плохого символа:" << (char_ind == -1 ? pattern_ptr + 1 : pattern_ptr - char_ind) << "\n\n" << std::endl;
+        std::cout << "Не совпал T[" << text_ptr << "] = \'" << text[text_ptr] << "\' И P[" << pattern_ptr << "] = \'" << pattern[pattern_ptr] << "\'\n";
+        std::cout << "R = [" << R[text[text_ptr]] << "]\n";
+        if (char_ind == -1) std::cout << "Символ \'" << text[text_ptr] << "\', который будет левее " << pattern_ptr << " не найден" << '\n';
+        else std::cout << "Символ \'" << text[text_ptr] << "\', который будет левее " << pattern_ptr << " располагается на " << char_ind << '\n';
+        std::cout << "Сдвиг по правилу плохого символа: " << (char_ind == -1 ? pattern_ptr + 1 : pattern_ptr - char_ind) << "\n\n\n" << std::endl;
         #endif
 
         return char_ind == -1 ? pattern_ptr + 1 : pattern_ptr - char_ind;
@@ -364,7 +207,7 @@ private:
         } else {
             std::cout << "Явная ошибка!!! Я не должен сюда попасть...\n";
         }
-        std::cout << "Сдвиг по Правилу Хорошего Суффикса = " << good_suffix_shift << std::endl;
+        std::cout << "Сдвиг по Правилу Хорошего Суффикса = " << good_suffix_shift << "\n\n\n" << std::endl;
         #endif
         return good_suffix_shift;
     }
@@ -406,7 +249,7 @@ private:
                 
                 #ifdef DEBUG
                 std::cout << "max(ППС, ПХС) = " << std::max(bad_char_shift, good_suffix_shift) << '\n';
-                std::cout << "Новый shift = " << shift << std::endl;
+                std::cout << "Новый shift = " << shift << "\n\n\n" << std::endl;
                 #endif
             }
         }
@@ -414,47 +257,51 @@ private:
 };
 
 
-
-
 int main() {
+
+    #ifndef BENCHMARK
+
     std::string text, pattern;
     std::cin >> text >> pattern;
-    // std::string text = "hebdaaeeaca";
-    // std::string pattern = "eeaca";
     BoyerMoore bm(text, pattern);
+
     std::vector<ssize_t> ans = bm.get_answer();
-    for (auto el : ans) {
-        std::cout << el << '\n';
+
+    for (const auto& ind : ans) {
+        std::cout << ind << '\n';
     }
 
-    // std::srand(time(NULL));
+    #else
+    std::srand(time(NULL));
     
-    // for (int i = 0; i < 1'000; ++i) {
+    for (int i = 0; i < 1'000; ++i) {
 
-    //     int n = std::rand() % 50 + 5;
-    //     int m = std::rand() % 5 + 1;
-    //     std::string text;
-    //     std::string pattern;
-    //     for (int i = 0; i < n; ++i) text.push_back('a' + (std::rand() % 3));
-    //     for (int i = 0; i < m; ++i) pattern.push_back('a' + (std::rand() % 3));
+        int n = std::rand() % 50 + 5;
+        int m = std::rand() % 5 + 1;
+        std::string text;
+        std::string pattern;
+        for (int i = 0; i < n; ++i) text.push_back('a' + (std::rand() % 3));
+        for (int i = 0; i < m; ++i) pattern.push_back('a' + (std::rand() % 3));
 
-    //     std::vector<ssize_t> naive = naive_(text, pattern);
+        std::vector<ssize_t> naive = naive_(text, pattern);
 
-    //     BoyerMoore bm(text, pattern);
+        BoyerMoore bm(text, pattern);
 
-    //     std::vector<ssize_t> boyer = bm.get_answer();
+        std::vector<ssize_t> boyer = bm.get_answer();
 
-    //     if (naive != boyer) {
-    //         std::cout << "ERROR on " << i + 1 << "!!!!" << std::endl;
-    //         std::cout << "Text = " << text << '\n' << "Pattern = " << pattern << std::endl;
-    //         std::cout << "Naive: " << naive << '\n' << "Boyer: " << boyer << std::endl;
-    //         break;
-    //     } else {
-    //         std::cout << "Ok on " << i + 1 << std::endl;
-    //         std::cout << "Len = " << boyer.size() << std::endl;
-    //         // std::cout << "Text = " << text << '\n' << "Pattern = " << pattern << std::endl;
-    //         // std::cout << "Naive: " << naive << '\n' << "Boyer: " << boyer << std::endl;
-    //     }
-    // }
+        if (naive != boyer) {
+            std::cout << "ERROR on " << i + 1 << "!!!!" << std::endl;
+            std::cout << "Text = " << text << '\n' << "Pattern = " << pattern << std::endl;
+            std::cout << "Naive: " << naive << '\n' << "Boyer: " << boyer << std::endl;
+            break;
+        } else {
+            std::cout << "Ok on " << i + 1 << std::endl;
+            std::cout << "Len = " << boyer.size() << std::endl;
+            // std::cout << "Text = " << text << '\n' << "Pattern = " << pattern << std::endl;
+            // std::cout << "Naive: " << naive << '\n' << "Boyer: " << boyer << std::endl;
+        }
+    }
+    #endif
 
+    return 0;
 }
