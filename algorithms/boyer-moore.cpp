@@ -268,7 +268,7 @@ int main() {
 
     std::string text, pattern;
     std::cin >> text >> pattern;
-    BoyerMoore bm(text, pattern);
+    BoyerMoore bm(std::move(text), std::move(pattern));
 
     std::vector<ssize_t> ans = bm.get_answer();
 
