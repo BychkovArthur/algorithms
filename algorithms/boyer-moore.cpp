@@ -4,6 +4,11 @@
 #include <algorithm>
 #include <iostream>
 
+/*
+    TODO:
+        - Добавить версию на 1 индексации для того, чтобы легко импрелентировать Апостолико-Джанкарло.
+*/
+
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const std::vector<T>& v) {
     for (const T& elem : v) {
