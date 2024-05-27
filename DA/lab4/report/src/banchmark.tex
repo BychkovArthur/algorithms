@@ -1,0 +1,67 @@
+\section{Тест производительности}
+
+
+Тест производительности представляет из себя следующее: поиск строки в тексте. Алфавит как и в задании - числа в диапазоне от $0$ до $2^{32} - 1$. Тестирование производится на тексте длиной 1 миллион символов. Длина паттерна варьируется, я ее задаю запуском $python$ скрипта, указывая левую и правую границы длины.
+
+\begin{alltt}
+> g++ benchmark.cpp
+> python3 test-gen.py 3 6
+> ./a.out
+Apostolico-Giancarlo 32ms
+std::search 16ms
+> ./a.out
+Apostolico-Giancarlo 32ms
+std::search 16ms
+> diff benchmark_out_ag.txt benchmark_out_find.txt
+> python3 test-gen.py 1000 2000
+> ./a.out
+Apostolico-Giancarlo 20ms
+std::search 16ms
+> diff benchmark_out_ag.txt benchmark_out_find.txt
+> ./a.out
+Apostolico-Giancarlo 21ms
+std::search 17ms
+> ./a.out
+Apostolico-Giancarlo 19ms
+std::search 16ms
+> diff benchmark_out_ag.txt benchmark_out_find.txt
+> python3 test-gen.py 100 200
+> ./a.out
+Apostolico-Giancarlo 23ms
+std::search 16ms
+> diff benchmark_out_ag.txt benchmark_out_find.txt
+> python3 test-gen.py 300 600
+> ./a.out
+Apostolico-Giancarlo 21ms
+std::search 16ms
+> ./a.out
+Apostolico-Giancarlo 21ms
+std::search 17ms
+> ./a.out
+Apostolico-Giancarlo 15ms
+std::search 16ms
+\end{alltt}
+
+Но, если урезать мощность алфавита для 3-х символов:
+
+\begin{alltt}
+> g++ benchmark.cpp
+> python3 test-gen.py 1000 2000
+> ./a.out
+Apostolico-Giancarlo 16ms
+std::search 28ms
+> python3 test-gen.py 3 6
+> ./a.out
+Apostolico-Giancarlo 55ms
+std::search 40ms
+> python3 test-gen.py 100 200
+> ./a.out
+Apostolico-Giancarlo 27ms
+std::search 28ms
+\end{alltt}
+
+Как видно, на случайных данных данный алгоритм может быть хуже наивного. Моё предположение, почему так заключается в том, что из-за M-массива, к которому мы постоянно обращаемся нарушается локальность кэша, что делает долгим выполнение некоторых операций.
+Однако, когда происходит много совпадений: маленький алфавит или же реальный текст, в котором может быть много слов похожих на образец, алгоритм довольно эффективен.
+
+\pagebreak
+
