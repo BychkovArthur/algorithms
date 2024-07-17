@@ -3,7 +3,6 @@
 #include <unordered_map>
 #include <algorithm>
 #include <iostream>
-#include <sstream>
 
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const std::vector<T>& v) {
@@ -14,7 +13,7 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& v) {
     return os;
 }
 
-std::vector<ssize_t> naive_(const std::vector<uint32_t>& text, const std::vector<uint32_t>& pattern) {
+std::vector<ssize_t> naive_(const std::string& text, const std::string& pattern) {
     std::vector<ssize_t> ans;
     ssize_t n = text.size();
     ssize_t m = pattern.size();
@@ -40,12 +39,12 @@ std::vector<ssize_t> naive_(const std::vector<uint32_t>& text, const std::vector
 
 class ApostolicoGiancarlo {
 public:
-    const std::vector<uint32_t> text;
-    const std::vector<uint32_t> pattern;
+    const std::string text;
+    const std::string pattern;
     const size_t t_sz;
     const size_t p_sz;
 
-    ApostolicoGiancarlo(const std::vector<uint32_t>& text, const std::vector<uint32_t>& pattern)
+    ApostolicoGiancarlo(const std::string& text, const std::string& pattern)
         : text(text), pattern(pattern), t_sz(text.size()), p_sz(pattern.size()), N(p_sz, 0), l(p_sz, 0), L(p_sz, -1), M(t_sz, 0) {
             n_func();
             strong_L_func();
@@ -54,7 +53,7 @@ public:
             find_pattern();
         }
 
-    ApostolicoGiancarlo(const std::vector<uint32_t>&& text, const std::vector<uint32_t>&& pattern)
+    ApostolicoGiancarlo(const std::string&& text, const std::string&& pattern)
         : text(text), pattern(pattern), t_sz(text.size()), p_sz(pattern.size()), N(p_sz, 0), l(p_sz, 0), L(p_sz, -1), M(t_sz, 0) {
             n_func();
             strong_L_func();
@@ -74,7 +73,7 @@ private:
     std::vector<ssize_t> ans;
 
 
-    void z_func(const std::vector<uint32_t>& s) {
+    void z_func(const std::string& s) {
         ssize_t l = 0, r = 0;
 
         N[0] = p_sz;
@@ -96,7 +95,7 @@ private:
     }
 
     void n_func() {
-        std::vector<uint32_t> reversed_pattern = pattern;
+        std::string reversed_pattern = pattern;
         std::reverse(reversed_pattern.begin(), reversed_pattern.end());
         z_func(reversed_pattern);
         std::reverse(N.begin(), N.end());
@@ -369,133 +368,21 @@ private:
     }
 };
 
-class KMP {
-public:
-    const std::vector<uint32_t> text;
-    const std::vector<uint32_t> pattern;
-    const size_t t_sz;
-    const size_t p_sz;
-
-    KMP(const std::vector<uint32_t>& text, const std::vector<uint32_t>& pattern) :
-        text(text), pattern(pattern), t_sz(text.size()), p_sz(pattern.size()), sp(p_sz, 0) {
-            strong_prefix_function();
-            find_pattern();
-        }
-    
-    KMP(const std::vector<uint32_t>&& text, const std::vector<uint32_t>&& pattern) :
-        text(text), pattern(pattern), t_sz(text.size()), p_sz(pattern.size()), sp(p_sz, 0) {
-            strong_prefix_function();
-            find_pattern();
-        }
-
-    std::vector<size_t> get_answer() {return ans;} 
-private:
-    // ssize_t for negative 1 in sp[0], because sp[0] undefined
-    std::vector<ssize_t> sp;
-    std::vector<size_t> ans;
-
-    void z_func() {
-        ssize_t l = 0, r = 0;
-        sp[0] = 0;
-
-        for (ssize_t i = 1; i < p_sz; ++i) {
-            if (i < r) sp[i] = std::min(sp[i - l], r - i);
-            while (i + sp[i] < p_sz && pattern[sp[i]] == pattern[i + sp[i]]) ++sp[i];
-            if (i + sp[i] > r) {
-                l = i;
-                r = i + sp[i];
-            }
-        }
-        #ifdef DEBUG
-        std::cout << "Z-func: " << sp << std::endl;
-        #endif
-    }
-
-    void strong_prefix_function() {
-        z_func();
-
-        std::vector<ssize_t> new_sp(p_sz, 0);
-        new_sp[0] = 0;
-        for (ssize_t i = 1; i < p_sz; ++i) {
-            if (sp[i] && !new_sp[i + sp[i] - 1]) new_sp[i + sp[i] - 1] = sp[i];
-        }
-        sp = new_sp;
-        #ifdef DEBUG
-        std::cout << "Strong prefix: " << sp << std::endl;
-        #endif
-    }
-
-    void find_pattern() {
-        ssize_t pattern_ptr = 0, text_ptr = 0;
-        while (text_ptr < t_sz) {
-            while (pattern_ptr < p_sz && text[text_ptr] == pattern[pattern_ptr]) {
-                ++pattern_ptr;
-                ++text_ptr;
-            }
-
-            // Первый случай - ничего не совпало.
-            if (pattern_ptr == 0) {
-                ++text_ptr;
-            
-            // Второй случай - паттерн найден.
-            // Указатели всё-равно будут указывать на элемент, следующий за совпавшим.
-            } else if (pattern_ptr == p_sz) {
-                ans.push_back(text_ptr - p_sz);
-                pattern_ptr = sp[pattern_ptr - 1];
-            
-            // Несовпадение где-то, но не в начале.
-            } else {
-                pattern_ptr = sp[pattern_ptr - 1];
-            }
-        }
-    }
-};
-
 
 int main() {
 
     #ifndef BENCHMARK
 
-    std::vector<uint32_t> text, pattern;
-    std::vector<size_t> lines_length;
-    
-    size_t current_line_length = 0;
-    uint32_t word;
+    std::string text, pattern;
+    std::cin >> text >> pattern;
+    // std::string text = "bbacbbcbaacaab";
+    // std::string pattern = "caa";
+    ApostolicoGiancarlo ag(std::move(text), std::move(pattern));
 
+    std::vector<ssize_t> ans = ag.get_answer();
 
-    std::string line;
-    std::getline(std::cin, line);
-    std::stringstream ss(line);
-    while (ss >> word) {
-        pattern.push_back(word);
-    }
-
-    while (std::getline(std::cin, line)) {
-        std::stringstream ss(line);
-        while (ss >> word) {
-            text.push_back(word);
-            ++current_line_length;
-        }
-        lines_length.push_back(current_line_length);
-        current_line_length = 0;
-    }
-
-    // ApostolicoGiancarlo ag(std::move(text), std::move(pattern));
-    KMP kmp(std::move(text), std::move(pattern));
-
-    std::vector<size_t> ans = kmp.get_answer();
-    for (auto& el : ans) ++el; // Переведём всё в 1-индексацию
-
-    size_t words_before_current_line_exclude_current_line = 0;
-    size_t words_before_current_line_include_current_line = 0;
-    size_t current_ans_ind = 0;
-
-    for (size_t i = 0; i < lines_length.size(); ++i) {
-        words_before_current_line_include_current_line += lines_length[i];
-        while (current_ans_ind < ans.size() && ans[current_ans_ind] <= words_before_current_line_include_current_line) {
-            std::cout << i + 1 << ", " << ans[current_ans_ind++] - words_before_current_line_exclude_current_line << '\n';
-        }
-        words_before_current_line_exclude_current_line = words_before_current_line_include_current_line;
+    for (const auto& ind : ans) {
+        std::cout << ind << '\n';
     }
 
     #else
