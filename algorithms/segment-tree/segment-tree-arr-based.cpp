@@ -163,8 +163,10 @@ struct SegmentTree {
 
         if (qr <= m) {
             set(ql, qr, l, m, left_son_ind, value);
+            push(m + 1, r, right_son_ind);
         } else if (ql > m) {
             set(ql, qr, m + 1, r, right_son_ind, value);
+            push(l, m, left_son_ind);
         } else {
             set(ql, qr, l, m, left_son_ind, value);
             set(ql, qr, m + 1, r, right_son_ind, value);
@@ -172,8 +174,6 @@ struct SegmentTree {
 
         tree[curr_tree_ind] = std::max(tree[left_son_ind], tree[right_son_ind]);
     }
-
-
 };
 
 

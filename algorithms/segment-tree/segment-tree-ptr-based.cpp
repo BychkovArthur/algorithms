@@ -143,8 +143,10 @@ public:
 
         if (qr <= m) {
             set(node->left, ql, qr, l, m, value);
+            push(node->right, m + 1, r);
         } else if (ql > m) {
             set(node->right, ql, qr, m + 1, r, value);
+            push(node->left, l, m);
         } else {
             set(node->left, ql, qr, l, m, value);
             set(node->right, ql, qr, m + 1, r, value);
@@ -152,9 +154,6 @@ public:
 
         node->value = std::max(node->left->value, node->right->value);
     }
-
-
-    
 };
 
 
