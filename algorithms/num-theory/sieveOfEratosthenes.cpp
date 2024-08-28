@@ -3,6 +3,10 @@
 
 constexpr size_t maxN = 121;
 
+
+/*
+*
+*/
 void sieve(std::bitset<maxN + 1>& bs, size_t n) {
     bs[0] = false;
     bs[1] = false;
