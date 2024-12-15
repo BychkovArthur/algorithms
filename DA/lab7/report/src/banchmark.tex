@@ -1,0 +1,23 @@
+\section{Тест производительности}
+
+
+Сравним рекурсивное решение с мемоизацией и без:
+
+\begin{alltt}
+❯ g++ descending_no_memo.cpp
+❯ ./a.out
+500
+1143
+Recursion without memoization: 995ms
+❯ g++ descending.cpp
+❯ ./a.out
+500
+1143
+Recursion with memoization: 0ms
+\end{alltt}
+
+Как видно, решение с мемоизацией работает моментально, в то время как решение без мемоизации затрачивает целую секунду.
+
+
+\pagebreak
+
