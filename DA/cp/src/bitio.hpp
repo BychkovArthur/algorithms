@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <cstddef>
 
-#include <array>
+#include <vector>
 
 #include <fstream>
 #include <iostream>
@@ -12,29 +12,18 @@
 class BitIO {
 private:
 
-    constexpr static size_t kBufferSize = 16 * 1024;
     constexpr static uint8_t kByteSize = 8;
 
-    std::array<uint8_t, kBufferSize> output_buffer_;
-    size_t bytes_in_output_buffer_ = 0;
+    std::vector<uint8_t>& output_;
 
-    uint8_t input_byte_ = 0x00;
+    size_t current_byte = 0;
     size_t bits_readed_ = 0;
-    bool first_byte_readed_ = false;
 
 
     uint8_t output_byte_ = 0x00;
     uint8_t bits_filled_ = 0;
 
     std::fstream stream_;
-
-    void FlushOutputBuffer() {
-        if (bytes_in_output_buffer_ > 0) {
-            stream_.write(reinterpret_cast<char*>(&output_buffer_[0]), bytes_in_output_buffer_);
-            stream_.flush();
-        }
-        bytes_in_output_buffer_ = 0;
-    }
 
     void SetBitToZero(const size_t num) {
         output_byte_ = output_byte_ & (~( ((uint8_t)1) << ( kByteSize - num - 1 ) ));
@@ -45,15 +34,15 @@ private:
     }
 
     uint8_t GetBit(const size_t num) {
-        return (input_byte_ >> (kByteSize - 1 - num)) & 0b00000001;
+        return (output_[current_byte] >> (kByteSize - 1 - num)) & 0b00000001;
     }
 
-    void MoveByteToOutputBuffer() {
+    void MoveByteToOutput() {
         for (size_t bit_number = bits_filled_; bit_number < kByteSize; ++bit_number) {
             SetBitToZero(bit_number);
         }
 
-        output_buffer_[bytes_in_output_buffer_++] = output_byte_;
+        output_.push_back(output_byte_);
         bits_filled_ = 0;
     }
 
@@ -63,14 +52,11 @@ public:
         kOne = 1,
     };
 
-    BitIO(std::fstream&& stream) : output_buffer_{}, stream_(std::move(stream)) {}
+    BitIO(std::vector<uint8_t>& output) : output_(output) {}
 
     void Write(const Bit bit) {
-        if (bytes_in_output_buffer_ == kBufferSize) {
-            FlushOutputBuffer();
-        }
         if (bits_filled_ == kByteSize) {
-            MoveByteToOutputBuffer();
+            MoveByteToOutput();
         }
 
         if (bit == Bit::kZero) {
@@ -82,12 +68,8 @@ public:
     }
 
     Bit Read() {
-        if (!first_byte_readed_) {
-            stream_ >> input_byte_;
-            first_byte_readed_ = true;
-        }
         if (bits_readed_ == kByteSize) {
-            stream_ >> input_byte_;
+            ++current_byte;
             bits_readed_ = 0;
         }
 
@@ -96,28 +78,18 @@ public:
     }
 
     bool Eof() {
-        if (!first_byte_readed_) {
-            stream_ >> input_byte_;
-            first_byte_readed_ = true;
-        }
         if (bits_readed_ == kByteSize) {
-            stream_ >> input_byte_;
+            ++current_byte;
             bits_readed_ = 0;
         }
 
-        return stream_.eof();
+        return current_byte == output_.size();
     }
 
     void FlushOutput() {
-        FlushOutputBuffer();
         if (bits_filled_ > 0) {
-            MoveByteToOutputBuffer();
-            FlushOutputBuffer();
+            MoveByteToOutput();
         }
-    }
-
-    void Close() {
-        stream_.close();
     }
 
     ~BitIO() {

@@ -30,6 +30,10 @@ public:
     BinaryTree(BinaryTree&&) = default;
     BinaryTree& operator=(BinaryTree&&) = default;
 
+    std::unique_ptr<Node>& GetRoot() {
+        return root_;
+    }
+
 private: 
     std::unique_ptr<Node> root_ = nullptr;
 

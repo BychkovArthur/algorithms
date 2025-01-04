@@ -24,17 +24,17 @@
 
 namespace {
 
-std::vector<uint8_t> ReadBytesFromFile(const std::string& filename) {
-    std::vector<uint8_t> result;
-    uint8_t byte;
-    std::ifstream ifs(filename, std::ios::binary);
+// std::vector<uint8_t> ReadBytesFromFile(const std::string& filename) {
+//     std::vector<uint8_t> result;
+//     uint8_t byte;
+//     std::ifstream ifs(filename, std::ios::binary);
     
-    while (ifs >> byte) {
-        result.push_back(byte);
-    }
+//     while (ifs >> byte) {
+//         result.push_back(byte);
+//     }
 
-    return result;
-}
+//     return result;
+// }
 
 template <typename T>
 bool IsSameVectors(const std::vector<T>& lhs, const std::vector<T> rhs) {
@@ -446,41 +446,50 @@ TEST(BinaryTreeTests, ShouldDesirialize2) {
 
 
 class HuffmanEncodingParametrizedTest : public ::testing::TestWithParam< std::tuple<
-                                                                        std::vector<uint8_t>, std::vector<int16_t>, std::vector<uint8_t>
+                                                                        std::vector<uint8_t>, std::vector<int16_t>, std::vector<uint8_t>, uint8_t
                                                                     > > {};
 
 
 TEST_P(HuffmanEncodingParametrizedTest, Test1) {
     // given
     const auto& input = std::get<0>(GetParam());
-    const auto& expected_serialized_tree = std::get<1>(GetParam());
+    const auto& expected_serialized_model = std::get<1>(GetParam());
     const auto& expected_encoded = std::get<2>(GetParam());
+    const auto& expected_alignment = std::get<3>(GetParam());
 
     // when
     Huffman huffman;
     const auto encoded = huffman.Encode(input);
-    const auto serialized_tree = Serialize(encoded.model);
+    const auto serialized_model = Serialize(encoded.model);
     
     // then
-    ASSERT_TRUE(IsSameVectors(serialized_tree, expected_serialized_tree));
+    ASSERT_TRUE(IsSameVectors(encoded.text, expected_encoded));
+    ASSERT_TRUE(IsSameVectors(serialized_model, expected_serialized_model));
+    ASSERT_EQ(encoded.alignment, expected_alignment);
 }
 
 INSTANTIATE_TEST_CASE_P(
     EncodingTest1,
     HuffmanEncodingParametrizedTest,
     ::testing::Values(
-        std::tuple< std::vector<uint8_t>, std::vector<int16_t>, std::vector<uint8_t> > {
+        std::tuple< std::vector<uint8_t>, std::vector<int16_t>, std::vector<uint8_t>, uint8_t > {
                         {0, 1, 18, 0, 12, 0, 5, 0, 1, 18, 0},
                         {-2, 0, -1, -1, -2, -2, 5, -1, -1, 12, -1, -1, -2, 1, -1, -1, 18, -1, -1},
-                        {}
+                        {0b01101110, 0b10101000, 0b11011100},
+                        1
         }, // АБРАКАДАБРА
-        std::tuple< std::vector<uint8_t>, std::vector<int16_t>, std::vector<uint8_t> > {
+        std::tuple< std::vector<uint8_t>, std::vector<int16_t>, std::vector<uint8_t>, uint8_t > {
                         {0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2},
                         {-2, 2, -1, -1, -2, 0, -1, -1, 1, -1, -1},
-                        {}
-        } // AAAAABBBBBCCCCC 
-
-
+                        {0b10101010, 0b10111111, 0b11110000, 0b0000000},
+                        7
+        }, // AAAAABBBBBCCCCC 
+        std::tuple< std::vector<uint8_t>, std::vector<int16_t>, std::vector<uint8_t>, uint8_t > {
+                        {0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
+                        {-2, 2, -1, -1, -2, 0, -1, -1, 1, -1, -1},
+                        {0b10101010, 0b10111111, 0b11110000, 0b0000000},
+                        0
+        } // AAAAABBBBBCCCCCCCCCCCC
     ));
 
 
@@ -518,6 +527,59 @@ TEST(HuffmanEncodingTest, ShouldThrowErrorTextContainsOnlyOneDifferentByte) {
     }
 }
 
+class HuffmanDecodingParametrizedTest : public ::testing::TestWithParam< std::tuple<
+                                                                        std::vector<uint8_t>, std::string, uint8_t, std::vector<uint8_t>
+                                                                    > > {};
+
+TEST_P(HuffmanDecodingParametrizedTest, Test1) {
+    // given
+    const auto& encoded_text = std::get<0>(GetParam());
+    const auto& filename = std::get<1>(GetParam());
+    const auto& alignment = std::get<2>(GetParam());
+    const auto& expected_decoded = std::get<3>(GetParam());
+
+    // when
+    std::ifstream ifs(filename, std::ios::binary);
+    if (!ifs.is_open()) {
+        FAIL() << "File not opened";
+    }
+    auto tree = Deserialize(ifs);
+    Huffman huffman;
+    Huffman::Encoded huffman_encoded{
+        .model = std::move(tree),
+        .text = encoded_text,
+        .alignment = alignment
+    };
+    const auto& decoded = huffman.Decode(huffman_encoded);
+    
+    // then
+    ASSERT_TRUE(IsSameVectors(decoded, expected_decoded));
+}
+
+
+INSTANTIATE_TEST_CASE_P(
+    DecodingTest1,
+    HuffmanDecodingParametrizedTest,
+    ::testing::Values(
+        std::tuple< std::vector<uint8_t>, std::string, uint8_t, std::vector<uint8_t> > {
+                        {0b01101110, 0b10101000, 0b11011100},
+                        "../test/static/serialized_abracadabra.bin",
+                        1,
+                        {0, 1, 18, 0, 12, 0, 5, 0, 1, 18, 0}
+        }, // АБРАКАДАБРА
+        std::tuple< std::vector<uint8_t>, std::string, uint8_t, std::vector<uint8_t> > {
+                        {0b10101010, 0b10111111, 0b11110000, 0b0000000},
+                        "../test/static/serialized_abc.bin",
+                        7,
+                        {0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2}
+        }, // AAAAABBBBBCCCCC
+        std::tuple< std::vector<uint8_t>, std::string, uint8_t, std::vector<uint8_t> > {
+                        {0b10101010, 0b10111111, 0b11110000, 0b0000000},
+                        "../test/static/serialized_abc.bin",
+                        0,
+                        {0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}
+        } // AAAAABBBBBCCCCCCCCCCCC
+    ));
 
 
 class BitIOOutputParametrizedTest : public ::testing::TestWithParam< std::tuple<
@@ -529,15 +591,10 @@ TEST_P(BitIOOutputParametrizedTest, Test1) {
     // given
     const auto& input = std::get<0>(GetParam());
     const auto& expected_output = std::get<1>(GetParam());
-    const std::string filename = "../test/static/bit_io_output.bin";
-    std::fstream ofs(filename, std::ios::binary | std::ios::out);
-
-    if (!ofs.is_open()) {
-        FAIL() << "FILE NOT OPENED";
-    }
+    std::vector<uint8_t> output;
 
     // when
-    BitIO stream(std::move(ofs));
+    BitIO stream(output);
     for (const auto& bit : input) {
         if (bit == 0) {
             stream.Write(BitIO::Bit::kZero);
@@ -546,9 +603,6 @@ TEST_P(BitIOOutputParametrizedTest, Test1) {
         }
     }
     stream.FlushOutput();
-    stream.Close();
-
-    const auto output = ReadBytesFromFile(filename);
     
     // then
     ASSERT_TRUE(IsSameVectors(output, expected_output));
@@ -590,21 +644,16 @@ INSTANTIATE_TEST_CASE_P(
 
 
 class BitIOInputParametrizedTest : public ::testing::TestWithParam< std::tuple<
-                                                                        std::string, std::vector<uint8_t>
+                                                                        std::vector<uint8_t>, std::vector<uint8_t>
                                                                     > > {};
 
 TEST_P(BitIOInputParametrizedTest, Test1) {
     // given
-    const auto& filename = std::get<0>(GetParam());
+    auto input = std::get<0>(GetParam());
     const auto& expected = std::get<1>(GetParam());
-    std::fstream ifs(filename, std::ios::binary | std::ios::in);
-
-    if (!ifs.is_open()) {
-        FAIL() << "FILE NOT OPENED";
-    }
 
     // when
-    BitIO stream(std::move(ifs));
+    BitIO stream(input);
     std::vector<uint8_t> readed;
     while (!stream.Eof()){
         const auto bit = stream.Read();
@@ -612,7 +661,6 @@ TEST_P(BitIOInputParametrizedTest, Test1) {
     }
 
     // then
-    std::cout << "Readed: " << readed << std::endl;
     ASSERT_TRUE(IsSameVectors(readed, expected));
 }
 
@@ -620,12 +668,12 @@ INSTANTIATE_TEST_CASE_P(
     InputTest1,
     BitIOInputParametrizedTest,
     ::testing::Values(
-        std::tuple< std::string, std::vector<uint8_t> > {
-                        "../test/static/bits_input1.bin",
+        std::tuple< std::vector<uint8_t>, std::vector<uint8_t> > {
+                        {173, 15, 23},
                         {1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1},
         },
-        std::tuple< std::string, std::vector<uint8_t> > {
-                        "../test/static/bits_input2.bin",
+        std::tuple< std::vector<uint8_t>, std::vector<uint8_t> > {
+                        {111, 0, 1},
                         {0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
         }
     ));

@@ -151,17 +151,84 @@ Huffman::Encoded Huffman::Encode(const std::vector<uint8_t>& text) const {
 
     auto tree = BuildPrefixTree(text);
     const auto codes = ExtractCodesFromPrefixTree(tree);
-    std::ofstream ofs("../test/static/example_output.txt", std::ios::binary);
-    BitIO stream(std::move(ofs));
+    
+    std::vector<uint8_t> encoded;
+    uint8_t bits_writed = 0;
+    BitIO stream(encoded);
 
     for (const auto& byte : text) {
         for (const auto& bit : codes[byte]) {
             stream.Write(bit);
+            ++bits_writed;
+            bits_writed %= 8;
+        }
+    }
+    stream.FlushOutput();
+
+    return {
+        .model = std::move(tree),
+        .text = std::move(encoded),
+        .alignment = (uint8_t)(8 - (int)bits_writed) % 8
+    };
+}
+
+std::vector<uint8_t> Huffman::Decode(Huffman::Encoded& encoded) const {
+    std::vector<uint8_t> decoded;
+    auto& tree = encoded.model;
+    auto& encoded_text = encoded.text;
+    BitIO stream(encoded_text);
+
+    /*
+    * Делаю полную хрень(((
+    */
+    auto& root = tree.GetRoot();
+    auto root_raw = root.get();
+    auto current_node = root_raw;
+
+
+    if (encoded.alignment == 0) {
+        while (!stream.Eof()) {
+            const auto bit = stream.Read();
+            if (bit == BitIO::Bit::kZero) {
+                if (!current_node->left) {
+                    throw std::logic_error("Invalid tree (left not found)");
+                }
+                current_node = current_node->left.get();
+            } else {
+                if (!current_node->right) {
+                    throw std::logic_error("Invalid tree (right not found)");
+                }
+                current_node = current_node->right.get();
+            }
+
+            if (!current_node->left && !current_node->right) {
+                decoded.push_back(current_node->byte);
+                current_node = root_raw;
+            }
+        }
+    } else {
+        for (size_t i = 0; i < 8 * (encoded_text.size() - 1) + (8 - encoded.alignment); ++i) {
+            const auto bit = stream.Read();
+            if (bit == BitIO::Bit::kZero) {
+                if (!current_node->left) {
+                    throw std::logic_error("Invalid tree (left not found)");
+                }
+                current_node = current_node->left.get();
+            } else {
+                if (!current_node->right) {
+                    throw std::logic_error("Invalid tree (right not found)");
+                }
+                current_node = current_node->right.get();
+            }
+
+            if (!current_node->left && !current_node->right) {
+                decoded.push_back(current_node->byte);
+                current_node = root_raw;
+            }
         }
     }
     
-    // Huffman::Encoded result;
-    // result.model = std::move(tree);
+    assert(current_node == root_raw);
 
-    return std::move(result);
+    return decoded;
 }

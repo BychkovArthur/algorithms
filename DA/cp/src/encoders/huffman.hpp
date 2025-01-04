@@ -16,5 +16,5 @@ public:
 
     Encoded Encode(const std::vector<uint8_t>& text) const;
 
-    std::vector<uint8_t> Decode(const Encoded& encoded) const;
+    std::vector<uint8_t> Decode(Encoded& encoded) const;
 };
