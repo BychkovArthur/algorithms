@@ -106,8 +106,9 @@ INSTANTIATE_TEST_CASE_P(
         std::tuple< std::vector<uint8_t>, BWT::Encoded > {{1}, {.text = {1}, .index = 0}},
         std::tuple< std::vector<uint8_t>, BWT::Encoded > {{1, 2}, {.text = {2, 1}, .index = 0}},
         std::tuple< std::vector<uint8_t>, BWT::Encoded > {{2, 1}, {.text = {2, 1}, .index = 1}},
-        std::tuple< std::vector<uint8_t>, BWT::Encoded > {{}, {.text = {}, .index = UINT64_MAX}}, // Невалидная хрень. Такого не должно быть
-        std::tuple< std::vector<uint8_t>, BWT::Encoded > {{1, 2, 18, 1, 12, 1, 5, 1, 2, 18, 1}, {.text = {18, 5, 1, 12, 18, 1, 1, 1, 1, 2, 2}, .index = 2}} // {1, 2, 18, 1, 12, 1, 5, 1, 2, 18, 1} = АБРАКАДАБРА, если смотреть по номерам букв
+        std::tuple< std::vector<uint8_t>, BWT::Encoded > {{}, {.text = {}, .index = 0}}, // Невалидная хрень. Такого не должно быть
+        std::tuple< std::vector<uint8_t>, BWT::Encoded > {{1, 2, 18, 1, 12, 1, 5, 1, 2, 18, 1}, {.text = {18, 5, 1, 12, 18, 1, 1, 1, 1, 2, 2}, .index = 2}}, // {1, 2, 18, 1, 12, 1, 5, 1, 2, 18, 1} = АБРАКАДАБРА, если смотреть по номерам букв
+        std::tuple< std::vector<uint8_t>, BWT::Encoded > {{1, 2, 3, 1, 2, 3, 3, 3, 3, 2, 2, 2, 1, 1, 1}, {.text = {2, 1, 1, 1, 3, 2, 2, 3, 1, 1, 2, 3, 3, 3, 2}, .index = 3}}
     ));
 
 
@@ -124,7 +125,7 @@ TEST_P(BWTDecodingParametrizedTest, Test1) {
     // when
     BWT bwt;
     const auto decoded = bwt.Decode(input);
-    
+
     // then
     ASSERT_TRUE(IsSameVectors(decoded, expected_decoded));
 }
@@ -142,7 +143,8 @@ INSTANTIATE_TEST_CASE_P(
         std::tuple< BWT::Encoded, std::vector<uint8_t> > {{.text = {1}, .index = 0}, {1}},
         std::tuple< BWT::Encoded, std::vector<uint8_t> > {{.text = {2, 1}, .index = 0}, {1, 2}},
         std::tuple< BWT::Encoded, std::vector<uint8_t> > {{.text = {2, 1}, .index = 1}, {2, 1}},
-        std::tuple< BWT::Encoded, std::vector<uint8_t> > {{.text = {18, 5, 1, 12, 18, 1, 1, 1, 1, 2, 2}, .index = 2}, {1, 2, 18, 1, 12, 1, 5, 1, 2, 18, 1}} // {1, 2, 18, 1, 12, 1, 5, 1, 2, 18, 1} = АБРАКАДАБРА, если смотреть по номерам букв
+        std::tuple< BWT::Encoded, std::vector<uint8_t> > {{.text = {18, 5, 1, 12, 18, 1, 1, 1, 1, 2, 2}, .index = 2}, {1, 2, 18, 1, 12, 1, 5, 1, 2, 18, 1}}, // {1, 2, 18, 1, 12, 1, 5, 1, 2, 18, 1} = АБРАКАДАБРА, если смотреть по номерам букв
+        std::tuple< BWT::Encoded, std::vector<uint8_t> > {{.text = {2, 1, 1, 1, 3, 2, 2, 3, 1, 1, 2, 3, 3, 3, 2}, .index = 3}, {1, 2, 3, 1, 2, 3, 3, 3, 3, 2, 2, 2, 1, 1, 1}}
     ));
 
 
@@ -489,7 +491,13 @@ INSTANTIATE_TEST_CASE_P(
                         {-2, 2, -1, -1, -2, 0, -1, -1, 1, -1, -1},
                         {0b10101010, 0b10111111, 0b11110000, 0b0000000},
                         0
-        } // AAAAABBBBBCCCCCCCCCCCC
+        }, // AAAAABBBBBCCCCCCCCCCCC
+        std::tuple< std::vector<uint8_t>, std::vector<int16_t>, std::vector<uint8_t>, uint8_t > {
+                {1, 1, 1, 2, 2, 2, 3, 3, 3},
+                {-2, 3, -1, -1, -2, 1, -1, -1, 2, -1, -1},
+                {0b10101011, 0b11110000},
+                1
+        } // 111222333
     ));
 
 

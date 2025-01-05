@@ -39,5 +39,14 @@ target_link_libraries(
   ${CMAKE_PROJECT_NAME}_lib
 )
 
+add_executable(
+  azip
+  azip.cpp
+)
+target_link_libraries(
+  azip
+  ${CMAKE_PROJECT_NAME}_lib
+)
+
 include(GoogleTest)
 gtest_discover_tests(hello_test)

@@ -26,7 +26,7 @@ std::vector<uint8_t> BWT::CalculateEncodedText(const std::vector<uint8_t>& text,
 }
 
 size_t BWT::CalculateEncodedIndex(const std::vector<std::size_t>& suffix_array) {
-    return std::find(suffix_array.begin(), suffix_array.end(), 0) - suffix_array.begin() - 1;
+    return std::find(suffix_array.begin(), suffix_array.end(), 0) - suffix_array.begin();
 }
 
 std::vector<size_t> BWT::GetDecodingPermutation(const std::vector<uint8_t>& first, const std::vector<uint8_t>& last) {
@@ -50,8 +50,8 @@ std::vector<size_t> BWT::GetDecodingPermutation(const std::vector<uint8_t>& firs
 
 std::vector<int32_t> BWT::ConvertToVectorWithSentinel(const std::vector<uint8_t>& text) {
     std::vector<int32_t> result(text.begin(), text.end());
-    result.push_back(-1);
-    for (auto& elem : result) ++elem; // Чтобы не было -1. И сентинелом стал 0.
+//    result.push_back(-1);
+//    for (auto& elem : result) ++elem; // Чтобы не было -1. И сентинелом стал 0.
     return result;
 }
 
@@ -60,7 +60,7 @@ BWT::Encoded BWT::Encode(const std::vector<uint8_t>& text) {
     SuffixArray suffix_array_factory(ConvertToVectorWithSentinel(text));
     const auto& suffix_array = suffix_array_factory.GetSuffixArray();
 
-    assert(text.size() + 1 == suffix_array.size());
+    assert(text.size()  == suffix_array.size());
 
     return {
         .text = CalculateEncodedText(text, suffix_array),

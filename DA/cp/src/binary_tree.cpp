@@ -53,6 +53,8 @@ void PreOrderTraversalDeserialization(std::unique_ptr<BinaryTree::Node>& node, s
     int16_t value;
     ifs.read(reinterpret_cast<char*>(&value), sizeof(int16_t));
 
+//    std::cout << "read value: " << value << std::endl;
+
     if (value == kNullptrSerializationValue) {
         return;
     }

@@ -144,10 +144,15 @@ std::array<std::vector<BitIO::Bit>, kAlphabetSize> ExtractCodesFromPrefixTree(co
     return codes;
 }
 
+#include <chrono>
+
 Huffman::Encoded Huffman::Encode(const std::vector<uint8_t>& text) const {
     if (text.empty()) {
         throw std::logic_error("Input text is empty");
     }
+
+    std::cout << "INSIDE HUFFMAN" << std::endl;
+//    std::cout << "TEXT: " << text << std::endl;
 
     auto tree = BuildPrefixTree(text);
     const auto codes = ExtractCodesFromPrefixTree(tree);
@@ -155,6 +160,8 @@ Huffman::Encoded Huffman::Encode(const std::vector<uint8_t>& text) const {
     std::vector<uint8_t> encoded;
     uint8_t bits_writed = 0;
     BitIO stream(encoded);
+
+    auto start = std::chrono::steady_clock::now();
 
     for (const auto& byte : text) {
         for (const auto& bit : codes[byte]) {
@@ -164,6 +171,8 @@ Huffman::Encoded Huffman::Encode(const std::vector<uint8_t>& text) const {
         }
     }
     stream.FlushOutput();
+    auto end = std::chrono::steady_clock::now();
+    std::cout << "bitio ms: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << std::endl;
 
     return {
         .model = std::move(tree),
@@ -184,7 +193,6 @@ std::vector<uint8_t> Huffman::Decode(Huffman::Encoded& encoded) const {
     auto& root = tree.GetRoot();
     auto root_raw = root.get();
     auto current_node = root_raw;
-
 
     if (encoded.alignment == 0) {
         while (!stream.Eof()) {
