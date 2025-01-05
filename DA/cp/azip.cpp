@@ -79,10 +79,6 @@ bool test_integrity = false;
 CompressionLevel compression_level = CompressionLevel::kSlow;
 
 CompressedFile CompressFile(const std::string& filename) {
-    std::vector<uint8_t> compressed_data;
-    std::optional<size_t> BWT_index;
-
-    std::vector<uint8_t> input_file;
     std::ifstream ifs(filename, std::ios::binary);
     if (!ifs.is_open()) {
         throw std::runtime_error("Can't open file");
@@ -93,46 +89,49 @@ CompressedFile CompressFile(const std::string& filename) {
     if (ifs.eof()) {
         throw std::runtime_error("File is empty");
     }
+
+
+    // Reading input file
+    std::vector<uint8_t> input_file;
     uint8_t byte;
     while (ifs.read(reinterpret_cast<char*>(&byte), sizeof (byte))) {
         input_file.push_back(byte);
     }
+    ifs.close();
 
+
+    std::optional<size_t> BWT_index;
     if (compression_level == CompressionLevel::kSlow) {
         BWT bwt;
         MTF mtf;
 
-        std::cout << "BWT ENCODING START" << std::endl;
+
+        // Encoding by BWT
+        std::cout << "Started: BWT encoding" << std::endl;
         auto start = std::chrono::steady_clock::now();
         auto BWT_encoded = bwt.Encode(input_file);
         auto end = std::chrono::steady_clock::now();
-        std::cout << "BWT ms total: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << std::endl;
-//        for (const auto& byte: BWT_encoded.text) {
-//            std::cout << (int)byte << ' ';
-//        }
-//        std::cout << std::endl << "index: " << BWT_encoded.index;
-//        std::cout << "\n\n\n\n" << std::endl;
+        std::cout << "Encoded: BWT; Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
 
 
-        std::cout << "MTF ENCODING START" << std::endl;
-//        auto start = std::chrono::steady_clock::now();
+        // Encoding by MTF
+        std::cout << "Started: MTF encoding" << std::endl;
         start = std::chrono::steady_clock::now();
         auto MTF_encoded = mtf.Encode(BWT_encoded.text);
-//        auto MTF_encoded = mtf.Encode(input_file);
-//        auto end = std::chrono::steady_clock::now();
         end = std::chrono::steady_clock::now();
-        std::cout << "MTF ms total: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << std::endl;
+        std::cout << "Encoded: MTF; Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
 
         BWT_index = BWT_encoded.index;
         input_file = std::move(MTF_encoded);
     }
     Huffman huffman;
 
-    std::cout << "HUFFMAN ENCODING START" << std::endl;
+    // Encoding by Huffman
+    std::cout << "Started: Huffman encoding" << std::endl;
     const auto& start = std::chrono::steady_clock::now();
     auto huffman_encoded = huffman.Encode(input_file);
     const auto& end = std::chrono::steady_clock::now();
-    std::cout << "Huffman ms total: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << std::endl;
+    std::cout << "Encoded: Huffman; Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
 
     return {
         .compressed_file = std::move(huffman_encoded.text),
@@ -143,43 +142,49 @@ CompressedFile CompressFile(const std::string& filename) {
 }
 
 void WriteCompressedFile(const std::string& filename) {
-    const auto& compressed_file = CompressFile(filename);
-
-    // getting metainfo + checksum
-    // TODO:
-
-    // writing checksum + metainfo
-    // TODO:
-
     std::ofstream ofs("aboba.bin", std::ios::binary);
+    if (!ofs.is_open()) {
+        throw std::runtime_error("Can't open file");
+    }
+    if (ofs.bad()) {
+        throw std::runtime_error("File is bad");
+    }
+    if (ofs.eof()) {
+        throw std::runtime_error("File is empty");
+    }
 
-    // compression_level
+    // TODO: Writing: metainfo + checksum
+
+    // TODO: Writing: checksum + metainfo
+
+
+    // Writing: compression_level
     ofs.write(reinterpret_cast<char*>(&compression_level), sizeof(compression_level));
-    std::cout << "Write compression_level: " << (int)compression_level << std::endl;
+    std::cout << "Wrote: compression_level: " << (int)compression_level << std::endl;
 
-    // serialized_huffman_tree
+    // Writing: serialized_huffman_tree
+    const auto& compressed_file = CompressFile(filename);
     for (const auto& bytes : compressed_file.serialized_huffman_tree) {
         ofs.write(reinterpret_cast<const char*>(&bytes), sizeof(bytes));
-        std::cout << (int16_t)bytes << ' ';
     }
-    std::cout << std::endl << "Write tree. Total " << compressed_file.serialized_huffman_tree.size() << std::endl;
+    std::cout << "Wrote: serialized_huffman_tree" << std::endl;
 
-    // alignment
+    // Writing: alignment
     ofs.write(reinterpret_cast<const char*>(&compressed_file.alignment), sizeof(compressed_file.alignment));
-    std::cout << "write alignment: " << (int)compressed_file.alignment << std::endl;
+    std::cout << "Wrote: alignment = " << (int)compressed_file.alignment << std::endl;
 
-    // BWT_index
+    // Writing: BWT_index
     if (compressed_file.BWT_index.has_value()) {
         ofs.write(reinterpret_cast<const char*>(&compressed_file.BWT_index.value()), sizeof(compressed_file.BWT_index.value()));
-        std::cout << "Write index: " << compressed_file.BWT_index.value() << std::endl;
+        std::cout << "Wrote:  BWT_index = " << compressed_file.BWT_index.value() << std::endl;
     }
 
-    // file
+    // Writing: file
     ofs.write(
             reinterpret_cast<const char*>(&compressed_file.compressed_file[0]),
             compressed_file.compressed_file.size() * sizeof(compressed_file.compressed_file[0])
     );
-    std::cout << "Write " << compressed_file.compressed_file.size() << " bytes of file" << std::endl;
+    std::cout << "Wrote: " << compressed_file.compressed_file.size() << " bytes of file" << std::endl;
 }
 
 
@@ -195,87 +200,81 @@ std::vector<uint8_t> DecompressFile(const std::string& filename) {
         throw std::runtime_error("File is empty");
     }
 
-    // parse checksum
-    // TODO:
 
-    // parse meta_info
-    // TODO:
+    // TODO: Reading: checksum
 
-    // parse compression_level
+
+    // TODO: Reading: meta_info
+
+
+    // Reading: compression_level
     CompressionLevel level;
     ifs.read(reinterpret_cast<char*>(&level), sizeof (level));
-    std::cout << "Parse compression level: " << (int)level << std::endl;
+    std::cout << "Read: compression_level = " << (int)level << std::endl;
 
-    // parse serialized_huffman_tree
-//    for (int i = 0; i < 11; ++i) {
-//        int16_t byte;
-//        ifs.read(reinterpret_cast<char*>(&byte), sizeof (byte));
-//        std::cout << (int16_t)byte << ' ';
-//    }
-//    ifs.seekg(1, ifs.beg);
-//    std::cout << "CORRECTION!!!" << std::endl;
-//    for (int i = 0; i < 999; ++i) {
-//        int16_t byte;
-//        ifs.read(reinterpret_cast<char*>(&byte), sizeof (byte));
-//        std::cout << (int16_t)byte << ' ';
-//    }
-//    ifs.seekg(1, ifs.beg);
 
+    // Reading: serialized_huffman_tree
     auto serialized_huffman_tree = Deserialize(ifs);
-    std::cout << "Parse tree" << std::endl;
+    std::cout << "Read: serialized_huffman_tree" << std::endl;
 
-    // parse alignment
+
+    // Reading: alignment
     uint8_t alignment;
     ifs.read(reinterpret_cast<char*>(&alignment), sizeof (alignment));
-    std::cout << "Parse alignment: " << (int)alignment << std::endl;
+    std::cout << "Read: alignment = " << (int)alignment << std::endl;
 
-//     parse BWT_index
+
+    //  Reading: BWT_index
     std::optional<size_t> BWT_index;
     if (level == CompressionLevel::kSlow) {
         size_t index;
         ifs.read(reinterpret_cast<char*>(&index), sizeof (index));
         BWT_index = index;
-        std::cout << "GOT BWT: " << BWT_index.value() << std::endl;
+        std::cout << "Read: BWT_index = " << index << std::endl;
     }
-    std::cout << "PARSE BWT" << std::endl;
 
-    // parse encoded file
+
+    // Reading: encoded_file
     std::vector<uint8_t> encoded_file;
     uint8_t byte;
     while (ifs.read(reinterpret_cast<char*>(&byte), sizeof (byte))) {
         encoded_file.push_back(byte); // Вот здесь можно сначала узанть размер файла, чтобы не было лишних реалокаций
     }
-    std::cout << "Parse file" << std::endl;
+    std::cout << "Read: encoded_file" << std::endl;
 
+
+    // Decoding by Huffman
     Huffman huffman;
     Huffman::Encoded huffman_encoded{
         .model = std::move(serialized_huffman_tree),
         .text = std::move(encoded_file),
         .alignment = alignment
     };
-    const auto& start = std::chrono::steady_clock::now();
+    auto start = std::chrono::steady_clock::now();
     auto decoded_file = huffman.Decode(huffman_encoded);
-    const auto& end = std::chrono::steady_clock::now();
-    std::cout << "Decompress huffman ms: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << std::endl;
+    auto end = std::chrono::steady_clock::now();
+    std::cout << "Decoded: Huffman; Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
+
 
     if (level == CompressionLevel::kSlow) {
         BWT bwt;
         MTF mtf;
 
-        auto start = std::chrono::steady_clock::now();
+        // Decoding by MTF
+        start = std::chrono::steady_clock::now();
         auto mtf_decoded = mtf.Decode(decoded_file);
-        auto end = std::chrono::steady_clock::now();
-        std::cout << "MTF decoding (ms): " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << std::endl;
+        end = std::chrono::steady_clock::now();
+        std::cout << "Decoded: MTF; Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
 
+        // Decoding by BWT
         start = std::chrono::steady_clock::now();
         auto bwt_decoded = bwt.Decode({
             .text = std::move(mtf_decoded), // по идее, без мува тоже копирования не будет
             .index = BWT_index.value()
         });
         end = std::chrono::steady_clock::now();
-        std::cout << "BWT decoding (ms): " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << std::endl;
+        std::cout << "Decoded: BWT; Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
         decoded_file = std::move(bwt_decoded);
-//        decoded_file = std::move(mtf_decoded);
     }
     
     return decoded_file;
@@ -295,12 +294,11 @@ void WriteDecompressedFile(const std::string& filename) {
         throw std::runtime_error("File is empty");
     }
 
-    std::cout << "HERE" << std::endl;
     ofs.write(
         reinterpret_cast<const char*>(&bytes[0]),
         bytes.size() * sizeof(bytes[0])
     );
-    std::cout << "Write " << bytes.size() << " bytes of file" << std::endl;
+    std::cout << "File decompressed. Size = " << bytes.size() << " bytes" << std::endl;
 }
 
 
