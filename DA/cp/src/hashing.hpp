@@ -26,4 +26,4 @@ struct CompressedFile {
 };
 
 uint32_t calculate_crc32(const MetaInfo& meta, const CompressionLevel& level, const CompressedFile& file);
-uint32_t calculate_crc32(std::ifstream& ifs);
+uint32_t calculate_crc32(std::istream& ifs);

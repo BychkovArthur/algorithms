@@ -38,10 +38,10 @@ private:
     std::unique_ptr<Node> root_ = nullptr;
 
     friend std::vector<int16_t> Serialize(const BinaryTree& bt);
-    friend BinaryTree Deserialize(std::ifstream& ifs);
+    friend BinaryTree Deserialize(std::istream& ifs);
     friend std::array<std::vector<BitIO::Bit>, kAlphabetSize> ExtractCodesFromPrefixTree(const BinaryTree& tree);
 };
 
 std::vector<int16_t> Serialize(const BinaryTree& bt);
-BinaryTree Deserialize(std::ifstream& ifs);
+BinaryTree Deserialize(std::istream& ifs);
 std::array<std::vector<BitIO::Bit>, kAlphabetSize> ExtractCodesFromPrefixTree(const BinaryTree& tree);

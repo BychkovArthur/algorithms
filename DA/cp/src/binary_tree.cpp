@@ -46,14 +46,12 @@ void PreOrderTraversalSerialization(const std::unique_ptr<BinaryTree::Node>& nod
     }
 }
 
-void PreOrderTraversalDeserialization(std::unique_ptr<BinaryTree::Node>& node, std::ifstream& ifs) {
+void PreOrderTraversalDeserialization(std::unique_ptr<BinaryTree::Node>& node, std::istream& ifs) {
     if (ifs.eof()) {
         throw std::logic_error("File ended, but tree is not complete");
     }
     int16_t value;
     ifs.read(reinterpret_cast<char*>(&value), sizeof(int16_t));
-
-//    std::cout << "read value: " << value << std::endl;
 
     if (value == kNullptrSerializationValue) {
         return;
@@ -75,7 +73,7 @@ std::vector<int16_t> Serialize(const BinaryTree &bt) {
     return serialized;
 }
 
-BinaryTree Deserialize(std::ifstream &ifs) {
+BinaryTree Deserialize(std::istream &ifs) {
     BinaryTree tree;
     PreOrderTraversalDeserialization(tree.root_, ifs);
     return std::move(tree);

@@ -36,7 +36,7 @@ uint32_t calculate_crc32(const MetaInfo& meta, const CompressionLevel& level, co
     return ~crc;
 }
 
-uint32_t calculate_crc32(std::ifstream& ifs) {
+uint32_t calculate_crc32(std::istream& ifs) {
     uint32_t crc = 0xFFFFFFFF;
     constexpr uint32_t polynomial = 0xEDB88320;
 

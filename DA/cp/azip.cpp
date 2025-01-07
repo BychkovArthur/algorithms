@@ -44,11 +44,13 @@
 */
 
 bool to_stdout = false;
+bool from_stdin = false;
 bool decompress = false;
 bool keep_input = false;
 bool list_info = false;
 bool recursive = false;
 bool test_integrity = false;
+size_t input_file_size = 0;
 CompressionLevel compression_level = CompressionLevel::kSlow;
 constexpr char* kCompressedFileSuffix = ".az";
 
@@ -70,33 +72,42 @@ size_t CalculateEncodedSize(const CompressedFile& compressed_file, const std::st
             + sizeof(uint32_t );
 }
 
-std::ifstream::pos_type filesize(const std::string& filename)
-{
-    std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
-    return in.tellg();
-}
+//std::ifstream::pos_type filesize(const std::string& filename)
+//{
+//    std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
+//    return in.tellg();
+//}
 
 CompressedFile CompressFile(const std::string& filename) {
-    std::ifstream ifs(filename, std::ios::binary);
-    if (!ifs.is_open()) {
-        throw std::runtime_error("Can't open file");
-    }
-    if (ifs.bad()) {
-        throw std::runtime_error("File is bad");
-    }
-    if (ifs.eof()) {
-        throw std::runtime_error("File is empty");
-    }
-
-
-    // Reading input file
     std::vector<uint8_t> input_file;
-    uint8_t byte;
-    while (ifs.read(reinterpret_cast<char*>(&byte), sizeof (byte))) {
-        input_file.push_back(byte);
-    }
-    ifs.close();
 
+    if (!from_stdin) {
+        std::ifstream ifs(filename, std::ios::binary);
+        if (!ifs.is_open()) {
+            throw std::runtime_error("Can't open file");
+        }
+        if (ifs.bad()) {
+            throw std::runtime_error("File is bad");
+        }
+        if (ifs.eof()) {
+            throw std::runtime_error("File is empty");
+        }
+
+        // Reading input file
+        uint8_t byte;
+        while (ifs.read(reinterpret_cast<char*>(&byte), sizeof (byte))) {
+            input_file.push_back(byte);
+            ++input_file_size;
+        }
+        ifs.close();
+    } else {
+        // Reading input file
+        uint8_t byte;
+        while (std::cin.read(reinterpret_cast<char*>(&byte), sizeof (byte))) {
+            input_file.push_back(byte);
+            ++input_file_size;
+        }
+    }
 
     std::optional<size_t> BWT_index;
     if (compression_level == CompressionLevel::kSlow) {
@@ -134,7 +145,7 @@ CompressedFile CompressFile(const std::string& filename) {
 
 void WriteCompressedFileToCout(const std::string& filename) {
     const auto& compressed_file = CompressFile(filename);
-    const auto input_file_size = filesize(filename);
+//    const auto input_file_size = filesize(filename);
 
     MetaInfo meta;
     meta.uncompressed_filename = filename;
@@ -182,7 +193,7 @@ void WriteCompressedFile(const std::string& filename) {
     }
 
     const auto& compressed_file = CompressFile(filename);
-    const auto input_file_size = filesize(filename);
+//    const auto input_file_size = filesize(filename);
 
     std::ofstream ofs;
     if (keep_input) {
@@ -248,7 +259,7 @@ void WriteCompressedFile(const std::string& filename) {
     }
 }
 
-MetaInfo ReadMetaInfo(std::ifstream& ifs) {
+MetaInfo ReadMetaInfo(std::istream& ifs) {
     MetaInfo meta;
 
     ifs.read(reinterpret_cast<char*>(&meta.compressed_size), sizeof (meta.compressed_size));
@@ -258,6 +269,83 @@ MetaInfo ReadMetaInfo(std::ifstream& ifs) {
     ifs.read(reinterpret_cast<char*>(&meta.uncompressed_filename[0]), meta.uncompressed_filename_length * sizeof (char));
 
     return meta;
+}
+
+std::vector<uint8_t> DecompressFromStdin() {
+    auto& ifs = std::cin;
+
+    // Reading: checksum
+    uint32_t check_sum;
+    ifs.read(reinterpret_cast<char*>(&check_sum), sizeof (check_sum));
+
+
+    // Reading: meta_info
+    ReadMetaInfo(ifs);
+
+
+    // Reading: compression_level
+    CompressionLevel level;
+    ifs.read(reinterpret_cast<char*>(&level), sizeof (level));
+
+
+    // Reading: serialized_huffman_tree
+    auto serialized_huffman_tree = Deserialize(ifs);
+
+
+    // Reading: alignment
+    uint8_t alignment;
+    ifs.read(reinterpret_cast<char*>(&alignment), sizeof (alignment));
+
+
+    //  Reading: BWT_index
+    std::optional<size_t> BWT_index;
+    if (level == CompressionLevel::kSlow) {
+        size_t index;
+        ifs.read(reinterpret_cast<char*>(&index), sizeof (index));
+        BWT_index = index;
+    }
+
+
+    // Reading: encoded_file
+    std::vector<uint8_t> encoded_file;
+    uint8_t byte;
+    while (ifs.read(reinterpret_cast<char*>(&byte), sizeof (byte))) {
+        encoded_file.push_back(byte); // Вот здесь можно сначала узанть размер файла, чтобы не было лишних реалокаций
+    }
+
+
+    // Decoding by Huffman
+    Huffman huffman;
+    Huffman::Encoded huffman_encoded{
+            .model = std::move(serialized_huffman_tree),
+            .text = std::move(encoded_file),
+            .alignment = alignment
+    };
+    auto start = std::chrono::steady_clock::now();
+    auto decoded_file = huffman.Decode(huffman_encoded);
+    auto end = std::chrono::steady_clock::now();
+
+
+    if (level == CompressionLevel::kSlow) {
+        BWT bwt;
+        MTF mtf;
+
+        // Decoding by MTF
+        start = std::chrono::steady_clock::now();
+        auto mtf_decoded = mtf.Decode(decoded_file);
+        end = std::chrono::steady_clock::now();
+
+        // Decoding by BWT
+        start = std::chrono::steady_clock::now();
+        auto bwt_decoded = bwt.Decode({
+                                              .text = std::move(mtf_decoded), // по идее, без мува тоже копирования не будет
+                                              .index = BWT_index.value()
+                                      });
+        end = std::chrono::steady_clock::now();
+        decoded_file = std::move(bwt_decoded);
+    }
+
+    return decoded_file;
 }
 
 
@@ -349,15 +437,24 @@ std::vector<uint8_t> DecompressFile(const std::string& filename) {
 }
 
 void WriteDecompressedFile(const std::string& filename) {
-    if (!filename.ends_with(kCompressedFileSuffix)) {
+    if (!filename.ends_with(kCompressedFileSuffix) && filename != "-") {
         throw std::runtime_error("Filename must ends with '.az'");
     }
 
-    const auto& bytes = DecompressFile(filename);
+    std::vector<uint8_t> bytes;
+    if (from_stdin) {
+        bytes = DecompressFromStdin();
+    } else {
+        bytes = DecompressFile(filename);
+    }
 
     if (!to_stdout) {
         const auto& new_filename = filename.substr(0, filename.size() - std::strlen(kCompressedFileSuffix));
-        std::rename(filename.c_str(), new_filename.c_str());
+
+        if (!keep_input) {
+            std::rename(filename.c_str(), new_filename.c_str());
+        }
+
 
         std::ofstream ofs(new_filename, std::ios::binary);
         if (!ofs.is_open()) {
@@ -386,6 +483,7 @@ void WriteDecompressedFile(const std::string& filename) {
 void print_help() {
     std::cout << "Usage: azip [options] [files]\n"
               << "Options:\n"
+              << "  -         Read from standard input.\n"
               << "  -c        Write output to standard output.\n"
               << "  -d        Decompress the input file.\n"
               << "  -k        Keep input files after processing.\n"
@@ -398,21 +496,44 @@ void print_help() {
 }
 
 void PrintFileMeta(const std::string& filename) {
-    std::ifstream ifs(filename, std::ios::binary);
-    auto meta = ReadMetaInfo(ifs);
-    auto ratio = (1.L - ((double)  meta.compressed_size / meta.uncompressed_size)) * 100;
-    std::cout << fmt::format("{:>20} {:>20} {:>19.1f}% {:>40}", meta.compressed_size, meta.uncompressed_size, ratio, meta.uncompressed_filename) << std::endl;
+    int32_t checksum;
+    if (!from_stdin) {
+        std::ifstream ifs(filename, std::ios::binary);
+        ifs.read(reinterpret_cast<char*>(&checksum), sizeof (checksum));
+        auto meta = ReadMetaInfo(ifs);
+        auto ratio = (1.L - ((double)  meta.compressed_size / meta.uncompressed_size)) * 100;
+        std::cout << fmt::format("{:>20} {:>20} {:>19.1f}% {:>40}", meta.compressed_size, meta.uncompressed_size, ratio, meta.uncompressed_filename) << std::endl;
+    } else {
+        auto& ifs = std::cin;
+        ifs.read(reinterpret_cast<char*>(&checksum), sizeof (checksum));
+        auto meta = ReadMetaInfo(ifs);
+        auto ratio = (1.L - ((double)  meta.compressed_size / meta.uncompressed_size)) * 100;
+        std::cout << fmt::format("{:>20} {:>20} {:>19.1f}% {:>40}", meta.compressed_size, meta.uncompressed_size, ratio, meta.uncompressed_filename) << std::endl;
+    }
+
 }
 
 void TestIntegrity(const std::string& filename) {
-    std::ifstream ifs(filename, std::ios::binary);
-    uint32_t expected_crc;
-    ifs.read(reinterpret_cast<char*>(&expected_crc), sizeof (expected_crc));
-    uint32_t actual_crc = calculate_crc32(ifs);
+    if (!from_stdin) {
+        std::ifstream ifs(filename, std::ios::binary);
+        uint32_t expected_crc;
+        ifs.read(reinterpret_cast<char*>(&expected_crc), sizeof (expected_crc));
+        uint32_t actual_crc = calculate_crc32(ifs);
 
-    if (expected_crc != actual_crc) {
-        throw std::runtime_error(fmt::format("Файл {} битый", filename));
+        if (expected_crc != actual_crc) {
+            throw std::runtime_error(fmt::format("Файл {} битый", filename));
+        }
+    } else {
+        auto& ifs = std::cin;
+        uint32_t expected_crc;
+        ifs.read(reinterpret_cast<char*>(&expected_crc), sizeof (expected_crc));
+        uint32_t actual_crc = calculate_crc32(ifs);
+
+        if (expected_crc != actual_crc) {
+            throw std::runtime_error(fmt::format("Файл {} битый", filename));
+        }
     }
+
 }
 
 
@@ -432,16 +553,12 @@ void process_files(const std::vector<std::string>& files) {
             continue;
         }
 
-
-
-        if (file == "-") {
+        if (decompress) {
+            WriteDecompressedFile(file);
         } else {
-            if (decompress) {
-                WriteDecompressedFile(file);
-            } else {
-                WriteCompressedFile(file);
-            }
+            WriteCompressedFile(file);
         }
+
     }
 }
 
@@ -474,6 +591,9 @@ int main(int argc, char* argv[]) {
         } else if (arg == "-h") {
             print_help();
             return 0;
+        } else if (arg == "-") {
+            from_stdin = true;
+            files.push_back("-");
         } else if (arg[0] == '-' && arg.size() > 1) {
             std::cerr << "Unknown option: " << arg << "\n";
             print_help();
