@@ -14,6 +14,8 @@
 
 #include <bitio.hpp>
 
+#include <treap.hpp>
+#include <suffix_tree.hpp>
 #include <suffix_array.hpp>
 #include <binary_tree.hpp>
 
@@ -24,18 +26,6 @@
 
 namespace {
 
-// std::vector<uint8_t> ReadBytesFromFile(const std::string& filename) {
-//     std::vector<uint8_t> result;
-//     uint8_t byte;
-//     std::ifstream ifs(filename, std::ios::binary);
-    
-//     while (ifs >> byte) {
-//         result.push_back(byte);
-//     }
-
-//     return result;
-// }
-
 template <typename T>
 bool IsSameVectors(const std::vector<T>& lhs, const std::vector<T> rhs) {
     // std::cout << "Comparing: {" << lhs << "} and {" << rhs << "}" << std::endl;
@@ -43,6 +33,28 @@ bool IsSameVectors(const std::vector<T>& lhs, const std::vector<T> rhs) {
 }
 
 } // namespace
+
+TEST(TreapTest, TestKthOrderStatistics) {
+    // given
+    std::vector<int64_t> values {1, 2, 15, 3, 8, 110, -18, -5, 13};
+
+    // when
+    Treap treap;
+    for (const auto& value : values) {
+        treap.insert(value);
+    }
+
+    // then
+    ASSERT_EQ(treap.get_kth_order_statistic(1), -18);
+    ASSERT_EQ(treap.get_kth_order_statistic(2), -5);
+    ASSERT_EQ(treap.get_kth_order_statistic(3), 1);
+    ASSERT_EQ(treap.get_kth_order_statistic(4), 2);
+    ASSERT_EQ(treap.get_kth_order_statistic(5), 3);
+    ASSERT_EQ(treap.get_kth_order_statistic(6), 8);
+    ASSERT_EQ(treap.get_kth_order_statistic(7), 13);
+    ASSERT_EQ(treap.get_kth_order_statistic(8), 15);
+    ASSERT_EQ(treap.get_kth_order_statistic(9), 110);
+}
 
 class SuffixArrayParametrizedTest : public ::testing::TestWithParam< std::tuple<
                                                                         std::vector<int32_t>, std::vector<size_t>
@@ -73,6 +85,38 @@ INSTANTIATE_TEST_CASE_P(
         std::tuple< std::vector<int32_t>, std::vector<size_t> > {{1}, {0}}
     ));
 
+class SuffixTreeParametrizedTest : public ::testing::TestWithParam< std::tuple<
+        std::vector<int32_t>, std::vector<size_t>
+> > {};
+
+
+TEST_P(SuffixTreeParametrizedTest, Test1) {
+    // given
+    auto input = std::get<0>(GetParam());
+    const auto& expected_output = std::get<1>(GetParam());
+
+    // when
+    input.push_back(-1);
+    SuffTree st(input);
+    st.Build();
+    const auto& actual_output = st.BuildSuffixArray();
+
+    // then
+    ASSERT_TRUE(IsSameVectors(actual_output, expected_output));
+}
+
+INSTANTIATE_TEST_CASE_P(
+        TestCase1,
+        SuffixTreeParametrizedTest,
+        ::testing::Values(
+                std::tuple< std::vector<int32_t>, std::vector<size_t> > {{1, 2, 3}, {3, 0, 1, 2}},
+                std::tuple< std::vector<int32_t>, std::vector<size_t> > {{1, 2, 3, 0}, {4, 3, 0, 1, 2}},
+                std::tuple< std::vector<int32_t>, std::vector<size_t> > {{1, 2, 1, 3, 1, 1, 3, 0}, {8, 7, 4, 0, 5, 2, 1, 6, 3}},
+                std::tuple< std::vector<int32_t>, std::vector<size_t> > {{1, 2, 1, 3, 1, 2, 1, 0}, {8, 7, 6, 4, 0, 2, 5, 1, 3}},
+                std::tuple< std::vector<int32_t>, std::vector<size_t> > {{}, {0}},
+                std::tuple< std::vector<int32_t>, std::vector<size_t> > {{1}, {1, 0}}
+        ));
+
 
 class BWTEncodingParametrizedTest : public ::testing::TestWithParam< std::tuple<
                                                                         std::vector<uint8_t>, BWT::Encoded
@@ -97,18 +141,18 @@ INSTANTIATE_TEST_CASE_P(
     EncodingTest1,
     BWTEncodingParametrizedTest,
     ::testing::Values(
-        std::tuple< std::vector<uint8_t>, BWT::Encoded > {{1, 2, 3}, {.text = {3, 1, 2}, .index = 0}},
-        std::tuple< std::vector<uint8_t>, BWT::Encoded > {{1, 3, 2}, {.text = {2, 3, 1}, .index = 0}},
-        std::tuple< std::vector<uint8_t>, BWT::Encoded > {{2, 1, 3}, {.text = {2, 3, 1}, .index = 1}},
-        std::tuple< std::vector<uint8_t>, BWT::Encoded > {{2, 3, 1}, {.text = {3, 1, 2}, .index = 1}},
-        std::tuple< std::vector<uint8_t>, BWT::Encoded > {{3, 2, 1}, {.text = {2, 3, 1}, .index = 2}},
-        std::tuple< std::vector<uint8_t>, BWT::Encoded > {{3, 1, 2}, {.text = {3, 1, 2}, .index = 2}},
-        std::tuple< std::vector<uint8_t>, BWT::Encoded > {{1}, {.text = {1}, .index = 0}},
-        std::tuple< std::vector<uint8_t>, BWT::Encoded > {{1, 2}, {.text = {2, 1}, .index = 0}},
-        std::tuple< std::vector<uint8_t>, BWT::Encoded > {{2, 1}, {.text = {2, 1}, .index = 1}},
-        std::tuple< std::vector<uint8_t>, BWT::Encoded > {{}, {.text = {}, .index = 0}}, // Невалидная хрень. Такого не должно быть
-        std::tuple< std::vector<uint8_t>, BWT::Encoded > {{1, 2, 18, 1, 12, 1, 5, 1, 2, 18, 1}, {.text = {18, 5, 1, 12, 18, 1, 1, 1, 1, 2, 2}, .index = 2}}, // {1, 2, 18, 1, 12, 1, 5, 1, 2, 18, 1} = АБРАКАДАБРА, если смотреть по номерам букв
-        std::tuple< std::vector<uint8_t>, BWT::Encoded > {{1, 2, 3, 1, 2, 3, 3, 3, 3, 2, 2, 2, 1, 1, 1}, {.text = {2, 1, 1, 1, 3, 2, 2, 3, 1, 1, 2, 3, 3, 3, 2}, .index = 3}}
+        std::tuple< std::vector<uint8_t>, BWT::Encoded > {{0, 2, 3}, {.text = {3, 0, 0, 2}, .index = 1}},
+        std::tuple< std::vector<uint8_t>, BWT::Encoded > {{0, 3, 2}, {.text = {2, 0, 3, 0}, .index = 1}},
+        std::tuple< std::vector<uint8_t>, BWT::Encoded > {{2, 0, 3}, {.text = {3, 2, 0, 0}, .index = 2}},
+        std::tuple< std::vector<uint8_t>, BWT::Encoded > {{2, 3, 0}, {.text = {0, 3, 0, 2}, .index = 2}},
+        std::tuple< std::vector<uint8_t>, BWT::Encoded > {{3, 2, 1}, {.text = {1, 2, 3, 0}, .index = 3}},
+        std::tuple< std::vector<uint8_t>, BWT::Encoded > {{3, 1, 2}, {.text = {2, 3, 1, 0}, .index = 3}},
+        std::tuple< std::vector<uint8_t>, BWT::Encoded > {{1}, {.text = {1, 0}, .index = 1}},
+        std::tuple< std::vector<uint8_t>, BWT::Encoded > {{1, 2}, {.text = {2, 0, 1}, .index = 1}},
+        std::tuple< std::vector<uint8_t>, BWT::Encoded > {{2, 1}, {.text = {1, 2, 0}, .index = 2}},
+        std::tuple< std::vector<uint8_t>, BWT::Encoded > {{}, {.text = {0}, .index = 0}}, // Невалидная хрень. Такого не должно быть
+        std::tuple< std::vector<uint8_t>, BWT::Encoded > {{1, 2, 18, 1, 12, 1, 5, 1, 2, 18, 1}, {.text = {1, 18, 5, 0, 12, 18, 1, 1, 1, 1, 2, 2}, .index = 3}}, // {1, 2, 18, 1, 12, 1, 5, 1, 2, 18, 1} = АБРАКАДАБРА, если смотреть по номерам букв
+        std::tuple< std::vector<uint8_t>, BWT::Encoded > {{1, 2, 3, 1, 2, 3, 3, 3, 3, 2, 2, 2, 1, 1, 1}, {.text = {1, 1, 1, 2, 0, 3, 2, 2, 3, 1, 1, 2, 3, 3, 3, 2}, .index = 4}}
     ));
 
 
@@ -127,6 +171,7 @@ TEST_P(BWTDecodingParametrizedTest, Test1) {
     const auto decoded = bwt.Decode(input);
 
     // then
+    std::cout << "Decoded: " << decoded << std::endl;
     ASSERT_TRUE(IsSameVectors(decoded, expected_decoded));
 }
 
@@ -134,17 +179,18 @@ INSTANTIATE_TEST_CASE_P(
     DecodingTest1,
     BWTDecodingParametrizedTest,
     ::testing::Values(
-        std::tuple< BWT::Encoded, std::vector<uint8_t> > {{.text = {3, 1, 2}, .index = 0}, {1, 2, 3}},
-        std::tuple< BWT::Encoded, std::vector<uint8_t> > {{.text = {2, 3, 1}, .index = 0}, {1, 3, 2}},
-        std::tuple< BWT::Encoded, std::vector<uint8_t> > {{.text = {2, 3, 1}, .index = 1}, {2, 1, 3}},
-        std::tuple< BWT::Encoded, std::vector<uint8_t> > {{.text = {3, 1, 2}, .index = 1}, {2, 3, 1}},
-        std::tuple< BWT::Encoded, std::vector<uint8_t> > {{.text = {2, 3, 1}, .index = 2}, {3, 2, 1}},
-        std::tuple< BWT::Encoded, std::vector<uint8_t> > {{.text = {3, 1, 2}, .index = 2}, {3, 1, 2}},
-        std::tuple< BWT::Encoded, std::vector<uint8_t> > {{.text = {1}, .index = 0}, {1}},
-        std::tuple< BWT::Encoded, std::vector<uint8_t> > {{.text = {2, 1}, .index = 0}, {1, 2}},
-        std::tuple< BWT::Encoded, std::vector<uint8_t> > {{.text = {2, 1}, .index = 1}, {2, 1}},
-        std::tuple< BWT::Encoded, std::vector<uint8_t> > {{.text = {18, 5, 1, 12, 18, 1, 1, 1, 1, 2, 2}, .index = 2}, {1, 2, 18, 1, 12, 1, 5, 1, 2, 18, 1}}, // {1, 2, 18, 1, 12, 1, 5, 1, 2, 18, 1} = АБРАКАДАБРА, если смотреть по номерам букв
-        std::tuple< BWT::Encoded, std::vector<uint8_t> > {{.text = {2, 1, 1, 1, 3, 2, 2, 3, 1, 1, 2, 3, 3, 3, 2}, .index = 3}, {1, 2, 3, 1, 2, 3, 3, 3, 3, 2, 2, 2, 1, 1, 1}}
+        std::tuple< BWT::Encoded, std::vector<uint8_t> > {{.text = {3, 0, 0, 2}, .index = 1}, {0, 2, 3}},
+        std::tuple< BWT::Encoded, std::vector<uint8_t> > {{.text = {2, 0, 3, 0}, .index = 1}, {0, 3, 2}},
+        std::tuple< BWT::Encoded, std::vector<uint8_t> > {{.text = {3, 2, 0, 0}, .index = 2}, {2, 0, 3}},
+        std::tuple< BWT::Encoded, std::vector<uint8_t> > {{.text = {0, 3, 0, 2}, .index = 2}, {2, 3, 0}},
+        std::tuple< BWT::Encoded, std::vector<uint8_t> > {{.text = {1, 2, 3, 0}, .index = 3}, {3, 2, 1}},
+        std::tuple< BWT::Encoded, std::vector<uint8_t> > {{.text = {2, 3, 1, 0}, .index = 3}, {3, 1, 2}},
+        std::tuple< BWT::Encoded, std::vector<uint8_t> > {{.text = {1, 0}, .index = 1}, {1}},
+        std::tuple< BWT::Encoded, std::vector<uint8_t> > {{.text = {2, 0, 1}, .index = 1}, {1, 2}},
+        std::tuple< BWT::Encoded, std::vector<uint8_t> > {{.text = {1, 2, 0}, .index = 2}, {2, 1}},
+//        std::tuple< BWT::Encoded, std::vector<uint8_t> > {{.text = {0}, .index = 0}, {}} // Херня тест. Такого не должно быть
+        std::tuple< BWT::Encoded, std::vector<uint8_t> > {{.text = {1, 18, 5, 0, 12, 18, 1, 1, 1, 1, 2, 2}, .index = 3}, {1, 2, 18, 1, 12, 1, 5, 1, 2, 18, 1}}, // {1, 2, 18, 1, 12, 1, 5, 1, 2, 18, 1} = АБРАКАДАБРА, если смотреть по номерам букв
+        std::tuple< BWT::Encoded, std::vector<uint8_t> > {{.text = {1, 1, 1, 2, 0, 3, 2, 2, 3, 1, 1, 2, 3, 3, 3, 2}, .index = 4}, {1, 2, 3, 1, 2, 3, 3, 3, 3, 2, 2, 2, 1, 1, 1}}
     ));
 
 
@@ -163,6 +209,7 @@ TEST_P(MTFEncodingParametrizedTest, Test1) {
     const auto encoded = mtf.Encode(input);
     
     // then
+    std::cout << "encode: " << encoded << std::endl;
     ASSERT_TRUE(IsSameVectors(encoded, expected_encoded));
 }
 
@@ -170,6 +217,7 @@ INSTANTIATE_TEST_CASE_P(
     EncodingTest1,
     MTFEncodingParametrizedTest,
     ::testing::Values(
+        std::tuple< std::vector<uint8_t>, std::vector<uint8_t> > {{1, 1, 2, 1}, {1, 0, 2, 1}},
         std::tuple< std::vector<uint8_t>, std::vector<uint8_t> > {{1, 1, 1, 2, 2, 1, 2, 1}, {1, 0, 0, 2, 0, 1, 1, 1}},
         std::tuple< std::vector<uint8_t>, std::vector<uint8_t> > {{5, 5, 5, 5, 5, 5, 4, 4, 4, 4, 4, 3, 3, 3, 100, 100}, {5, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 5, 0, 0, 100, 0}},
         std::tuple< std::vector<uint8_t>, std::vector<uint8_t> > {{4, 2, 0, 3, 4, 0, 0, 0, 0, 1, 1}, {4, 3, 2, 4, 3, 2, 0, 0, 0, 4, 0}}, // РДАКРААААББ

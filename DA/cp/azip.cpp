@@ -15,6 +15,8 @@
 #include <optional>
 
 #include <chrono>
+#include <cstring>
+#include <fmt/format.h>
 
 /* TODO:
  * 1) -lr <dir>: вывести информацию по всем файлам.
@@ -41,35 +43,6 @@
  *      c) BWT index
 */
 
-struct MetaInfo {
-    size_t compressed_size;
-    size_t uncompressed_size;
-    uint8_t uncompressed_name[50];
-};
-
-enum class CompressionLevel : uint8_t {
-    kFast = 0,
-    kSlow = 1,
-};
-
-struct FastAlgorithmAdditionalInfo {
-    std::vector<uint8_t> serialized_model;
-    uint8_t alignment;
-};
-
-struct SlowAlgorithmAdditionalInfo {
-    std::vector<uint8_t> serialized_model;
-    uint8_t alignment;
-    size_t BWT_index;
-};
-
-struct CompressedFile {
-    std::vector<uint8_t> compressed_file;
-    std::vector<int16_t> serialized_huffman_tree;
-    uint8_t alignment;
-    std::optional<size_t> BWT_index;
-};
-
 bool to_stdout = false;
 bool decompress = false;
 bool keep_input = false;
@@ -77,6 +50,31 @@ bool list_info = false;
 bool recursive = false;
 bool test_integrity = false;
 CompressionLevel compression_level = CompressionLevel::kSlow;
+constexpr char* kCompressedFileSuffix = ".az";
+
+size_t CalculateEncodedSize(const CompressedFile& compressed_file, const std::string& uncompressed_filename) {
+    return (compressed_file.compressed_file.size() * sizeof(compressed_file.compressed_file[0])) +
+           (compressed_file.serialized_huffman_tree.size() * sizeof(compressed_file.serialized_huffman_tree[0])) +
+           sizeof (compressed_file.alignment) +
+           (compressed_file.BWT_index.has_value() ? sizeof(compressed_file.BWT_index.value()) : 0) +
+
+           sizeof (compression_level) +
+
+           /* MetaInfo */
+           uncompressed_filename.size() * sizeof (uncompressed_filename[0]) +
+            sizeof(size_t) +              /* compressed_size*/
+            sizeof(size_t) +              /* uncompressed_size */
+            sizeof(size_t) +              /* uncompressed_filename_length */
+
+            /* CheckSum */
+            + sizeof(uint32_t );
+}
+
+std::ifstream::pos_type filesize(const std::string& filename)
+{
+    std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
+    return in.tellg();
+}
 
 CompressedFile CompressFile(const std::string& filename) {
     std::ifstream ifs(filename, std::ios::binary);
@@ -105,21 +103,16 @@ CompressedFile CompressFile(const std::string& filename) {
         BWT bwt;
         MTF mtf;
 
-
         // Encoding by BWT
-        std::cout << "Started: BWT encoding" << std::endl;
         auto start = std::chrono::steady_clock::now();
         auto BWT_encoded = bwt.Encode(input_file);
         auto end = std::chrono::steady_clock::now();
-        std::cout << "Encoded: BWT; Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
 
 
         // Encoding by MTF
-        std::cout << "Started: MTF encoding" << std::endl;
         start = std::chrono::steady_clock::now();
         auto MTF_encoded = mtf.Encode(BWT_encoded.text);
         end = std::chrono::steady_clock::now();
-        std::cout << "Encoded: MTF; Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
 
         BWT_index = BWT_encoded.index;
         input_file = std::move(MTF_encoded);
@@ -127,11 +120,9 @@ CompressedFile CompressFile(const std::string& filename) {
     Huffman huffman;
 
     // Encoding by Huffman
-    std::cout << "Started: Huffman encoding" << std::endl;
     const auto& start = std::chrono::steady_clock::now();
     auto huffman_encoded = huffman.Encode(input_file);
     const auto& end = std::chrono::steady_clock::now();
-    std::cout << "Encoded: Huffman; Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
 
     return {
         .compressed_file = std::move(huffman_encoded.text),
@@ -141,8 +132,66 @@ CompressedFile CompressFile(const std::string& filename) {
     };
 }
 
+void WriteCompressedFileToCout(const std::string& filename) {
+    const auto& compressed_file = CompressFile(filename);
+    const auto input_file_size = filesize(filename);
+
+    MetaInfo meta;
+    meta.uncompressed_filename = filename;
+    meta.uncompressed_filename_length = meta.uncompressed_filename.size();
+    meta.uncompressed_size = input_file_size;
+    meta.compressed_size = CalculateEncodedSize(compressed_file, filename);
+
+    // Writing: checksum
+    uint32_t check_sum = calculate_crc32(meta, compression_level, compressed_file);
+    std::cout.write(reinterpret_cast<char*>(&check_sum), sizeof (check_sum));
+
+    // Writing: metainfo
+    std::cout.write(reinterpret_cast<const char*>(&meta.compressed_size), sizeof (meta.compressed_size));
+    std::cout.write(reinterpret_cast<const char*>(&meta.uncompressed_size), sizeof (meta.uncompressed_size));
+    std::cout.write(reinterpret_cast<const char*>(&meta.uncompressed_filename_length), sizeof (meta.uncompressed_filename_length));
+    std::cout.write(reinterpret_cast<const char*>(meta.uncompressed_filename.c_str()), meta.uncompressed_filename_length * sizeof (meta.uncompressed_filename[0]));
+
+    // Writing: compression_level
+    std::cout.write(reinterpret_cast<char*>(&compression_level), sizeof(compression_level));
+
+    // Writing: serialized_huffman_tree
+    for (const auto& bytes : compressed_file.serialized_huffman_tree) {
+        std::cout.write(reinterpret_cast<const char*>(&bytes), sizeof(bytes));
+    }
+
+    // Writing: alignment
+    std::cout.write(reinterpret_cast<const char*>(&compressed_file.alignment), sizeof(compressed_file.alignment));
+
+    // Writing: BWT_index
+    if (compressed_file.BWT_index.has_value()) {
+        std::cout.write(reinterpret_cast<const char*>(&compressed_file.BWT_index.value()), sizeof(compressed_file.BWT_index.value()));
+    }
+
+    // Writing: file
+    std::cout.write(
+            reinterpret_cast<const char*>(&compressed_file.compressed_file[0]),
+            compressed_file.compressed_file.size() * sizeof(compressed_file.compressed_file[0])
+    );
+}
+
 void WriteCompressedFile(const std::string& filename) {
-    std::ofstream ofs("aboba.bin", std::ios::binary);
+    if (to_stdout) {
+        WriteCompressedFileToCout(filename);
+        return;
+    }
+
+    const auto& compressed_file = CompressFile(filename);
+    const auto input_file_size = filesize(filename);
+
+    std::ofstream ofs;
+    if (keep_input) {
+        const auto new_filename = filename + kCompressedFileSuffix;
+        ofs.open(new_filename, std::ios::binary);
+    } else {
+        ofs.open(filename, std::ios::binary);
+    }
+
     if (!ofs.is_open()) {
         throw std::runtime_error("Can't open file");
     }
@@ -153,30 +202,37 @@ void WriteCompressedFile(const std::string& filename) {
         throw std::runtime_error("File is empty");
     }
 
-    // TODO: Writing: metainfo + checksum
 
-    // TODO: Writing: checksum + metainfo
+    MetaInfo meta;
+    meta.uncompressed_filename = filename;
+    meta.uncompressed_filename_length = meta.uncompressed_filename.size();
+    meta.uncompressed_size = input_file_size;
+    meta.compressed_size = CalculateEncodedSize(compressed_file, filename);
 
+    // Writing: checksum
+    uint32_t check_sum = calculate_crc32(meta, compression_level, compressed_file);
+    ofs.write(reinterpret_cast<char*>(&check_sum), sizeof (check_sum));
+
+    // Writing: metainfo
+    ofs.write(reinterpret_cast<const char*>(&meta.compressed_size), sizeof (meta.compressed_size));
+    ofs.write(reinterpret_cast<const char*>(&meta.uncompressed_size), sizeof (meta.uncompressed_size));
+    ofs.write(reinterpret_cast<const char*>(&meta.uncompressed_filename_length), sizeof (meta.uncompressed_filename_length));
+    ofs.write(reinterpret_cast<const char*>(meta.uncompressed_filename.c_str()), meta.uncompressed_filename_length * sizeof (meta.uncompressed_filename[0]));
 
     // Writing: compression_level
     ofs.write(reinterpret_cast<char*>(&compression_level), sizeof(compression_level));
-    std::cout << "Wrote: compression_level: " << (int)compression_level << std::endl;
 
     // Writing: serialized_huffman_tree
-    const auto& compressed_file = CompressFile(filename);
     for (const auto& bytes : compressed_file.serialized_huffman_tree) {
         ofs.write(reinterpret_cast<const char*>(&bytes), sizeof(bytes));
     }
-    std::cout << "Wrote: serialized_huffman_tree" << std::endl;
 
     // Writing: alignment
     ofs.write(reinterpret_cast<const char*>(&compressed_file.alignment), sizeof(compressed_file.alignment));
-    std::cout << "Wrote: alignment = " << (int)compressed_file.alignment << std::endl;
 
     // Writing: BWT_index
     if (compressed_file.BWT_index.has_value()) {
         ofs.write(reinterpret_cast<const char*>(&compressed_file.BWT_index.value()), sizeof(compressed_file.BWT_index.value()));
-        std::cout << "Wrote:  BWT_index = " << compressed_file.BWT_index.value() << std::endl;
     }
 
     // Writing: file
@@ -184,7 +240,24 @@ void WriteCompressedFile(const std::string& filename) {
             reinterpret_cast<const char*>(&compressed_file.compressed_file[0]),
             compressed_file.compressed_file.size() * sizeof(compressed_file.compressed_file[0])
     );
-    std::cout << "Wrote: " << compressed_file.compressed_file.size() << " bytes of file" << std::endl;
+    ofs.close();
+
+    if (!keep_input) {
+        const auto new_filename = filename + kCompressedFileSuffix;
+        std::rename(filename.c_str(), new_filename.c_str());
+    }
+}
+
+MetaInfo ReadMetaInfo(std::ifstream& ifs) {
+    MetaInfo meta;
+
+    ifs.read(reinterpret_cast<char*>(&meta.compressed_size), sizeof (meta.compressed_size));
+    ifs.read(reinterpret_cast<char*>(&meta.uncompressed_size), sizeof (meta.uncompressed_size));
+    ifs.read(reinterpret_cast<char*>(&meta.uncompressed_filename_length), sizeof (meta.uncompressed_filename_length));
+    meta.uncompressed_filename.resize(meta.uncompressed_filename_length);
+    ifs.read(reinterpret_cast<char*>(&meta.uncompressed_filename[0]), meta.uncompressed_filename_length * sizeof (char));
+
+    return meta;
 }
 
 
@@ -201,27 +274,27 @@ std::vector<uint8_t> DecompressFile(const std::string& filename) {
     }
 
 
-    // TODO: Reading: checksum
+    // Reading: checksum
+    uint32_t check_sum;
+    ifs.read(reinterpret_cast<char*>(&check_sum), sizeof (check_sum));
 
 
-    // TODO: Reading: meta_info
+    // Reading: meta_info
+    ReadMetaInfo(ifs);
 
 
     // Reading: compression_level
     CompressionLevel level;
     ifs.read(reinterpret_cast<char*>(&level), sizeof (level));
-    std::cout << "Read: compression_level = " << (int)level << std::endl;
 
 
     // Reading: serialized_huffman_tree
     auto serialized_huffman_tree = Deserialize(ifs);
-    std::cout << "Read: serialized_huffman_tree" << std::endl;
 
 
     // Reading: alignment
     uint8_t alignment;
     ifs.read(reinterpret_cast<char*>(&alignment), sizeof (alignment));
-    std::cout << "Read: alignment = " << (int)alignment << std::endl;
 
 
     //  Reading: BWT_index
@@ -230,7 +303,6 @@ std::vector<uint8_t> DecompressFile(const std::string& filename) {
         size_t index;
         ifs.read(reinterpret_cast<char*>(&index), sizeof (index));
         BWT_index = index;
-        std::cout << "Read: BWT_index = " << index << std::endl;
     }
 
 
@@ -240,7 +312,6 @@ std::vector<uint8_t> DecompressFile(const std::string& filename) {
     while (ifs.read(reinterpret_cast<char*>(&byte), sizeof (byte))) {
         encoded_file.push_back(byte); // Вот здесь можно сначала узанть размер файла, чтобы не было лишних реалокаций
     }
-    std::cout << "Read: encoded_file" << std::endl;
 
 
     // Decoding by Huffman
@@ -253,7 +324,6 @@ std::vector<uint8_t> DecompressFile(const std::string& filename) {
     auto start = std::chrono::steady_clock::now();
     auto decoded_file = huffman.Decode(huffman_encoded);
     auto end = std::chrono::steady_clock::now();
-    std::cout << "Decoded: Huffman; Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
 
 
     if (level == CompressionLevel::kSlow) {
@@ -264,7 +334,6 @@ std::vector<uint8_t> DecompressFile(const std::string& filename) {
         start = std::chrono::steady_clock::now();
         auto mtf_decoded = mtf.Decode(decoded_file);
         end = std::chrono::steady_clock::now();
-        std::cout << "Decoded: MTF; Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
 
         // Decoding by BWT
         start = std::chrono::steady_clock::now();
@@ -273,7 +342,6 @@ std::vector<uint8_t> DecompressFile(const std::string& filename) {
             .index = BWT_index.value()
         });
         end = std::chrono::steady_clock::now();
-        std::cout << "Decoded: BWT; Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
         decoded_file = std::move(bwt_decoded);
     }
     
@@ -281,24 +349,37 @@ std::vector<uint8_t> DecompressFile(const std::string& filename) {
 }
 
 void WriteDecompressedFile(const std::string& filename) {
+    if (!filename.ends_with(kCompressedFileSuffix)) {
+        throw std::runtime_error("Filename must ends with '.az'");
+    }
+
     const auto& bytes = DecompressFile(filename);
 
-    std::ofstream ofs("decoded.mkv", std::ios::binary);
-    if (!ofs.is_open()) {
-        throw std::runtime_error("Can't open file");
-    }
-    if (ofs.bad()) {
-        throw std::runtime_error("File is bad");
-    }
-    if (ofs.eof()) {
-        throw std::runtime_error("File is empty");
-    }
+    if (!to_stdout) {
+        const auto& new_filename = filename.substr(0, filename.size() - std::strlen(kCompressedFileSuffix));
+        std::rename(filename.c_str(), new_filename.c_str());
 
-    ofs.write(
-        reinterpret_cast<const char*>(&bytes[0]),
-        bytes.size() * sizeof(bytes[0])
-    );
-    std::cout << "File decompressed. Size = " << bytes.size() << " bytes" << std::endl;
+        std::ofstream ofs(new_filename, std::ios::binary);
+        if (!ofs.is_open()) {
+            throw std::runtime_error("Can't open file");
+        }
+        if (ofs.bad()) {
+            throw std::runtime_error("File is bad");
+        }
+        if (ofs.eof()) {
+            throw std::runtime_error("File is empty");
+        }
+
+        ofs.write(
+            reinterpret_cast<const char*>(&bytes[0]),
+            bytes.size() * sizeof(bytes[0])
+        );
+    } else {
+        std::cout.write(
+            reinterpret_cast<const char*>(&bytes[0]),
+            bytes.size() * sizeof(bytes[0])
+        );
+    }
 }
 
 
@@ -316,36 +397,49 @@ void print_help() {
               << "  -h        Display this help message.\n";
 }
 
+void PrintFileMeta(const std::string& filename) {
+    std::ifstream ifs(filename, std::ios::binary);
+    auto meta = ReadMetaInfo(ifs);
+    auto ratio = (1.L - ((double)  meta.compressed_size / meta.uncompressed_size)) * 100;
+    std::cout << fmt::format("{:>20} {:>20} {:>19.1f}% {:>40}", meta.compressed_size, meta.uncompressed_size, ratio, meta.uncompressed_filename) << std::endl;
+}
+
+void TestIntegrity(const std::string& filename) {
+    std::ifstream ifs(filename, std::ios::binary);
+    uint32_t expected_crc;
+    ifs.read(reinterpret_cast<char*>(&expected_crc), sizeof (expected_crc));
+    uint32_t actual_crc = calculate_crc32(ifs);
+
+    if (expected_crc != actual_crc) {
+        throw std::runtime_error(fmt::format("Файл {} битый", filename));
+    }
+}
+
+
 // Функция для обработки флагов и файлов
 void process_files(const std::vector<std::string>& files) {
+    if (list_info) {
+        std::cout << fmt::format("{:>20} {:>20} {:>20} {:>40}", "compressed", "uncompressed", "ratio", "uncompressed_name") << std::endl;
+    }
     for (const auto& file : files) {
+        if (list_info) {
+            PrintFileMeta(file);
+            continue;
+        }
+
+        if (test_integrity) {
+            TestIntegrity(file);
+            continue;
+        }
+
+
+
         if (file == "-") {
-            std::cout << "Processing standard input...\n";
-            // Обработка stdin
         } else {
-            std::cout << "Processing file: " << file << "\n";
-            
             if (decompress) {
-                std::cout << "Decompressing " << file << "...\n";
-                WriteDecompressedFile("aboba.bin");
+                WriteDecompressedFile(file);
             } else {
-                std::cout << "Compressing " << file << " with level " << (compression_level == CompressionLevel::kSlow ? "slow" : "fast") << "...\n";
                 WriteCompressedFile(file);
-            }
-
-            if (list_info) {
-                std::cout << "Listing information about: " << file << "\n";
-                // Добавьте логику вывода информации о файле
-            }
-
-            if (test_integrity) {
-                std::cout << "Testing integrity of: " << file << "\n";
-                // Добавьте логику проверки целостности
-            }
-
-            if (!keep_input) {
-                std::cout << "Removing input file: " << file << "\n";
-                // Удаление исходного файла
             }
         }
     }

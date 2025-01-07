@@ -44,6 +44,6 @@ std::ostream& operator<<(std::ostream& os, const std::array<uint8_t, N> arr) {
     return os;
 }
 
-std::vector<uint8_t> CountSort(const std::vector<uint8_t>& text);
+std::vector<uint16_t> CountSort(const std::vector<uint16_t>& text);
 
 std::array<size_t, kAlphabetSize> CountBytes(const std::vector<uint8_t>& bytes);

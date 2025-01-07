@@ -7,7 +7,14 @@
 #include <const.hpp>
 
 class MTF {
-    std::array<uint8_t, kAlphabetSize> GetInitialOrder();
+    template<typename T>
+    std::array<T, kAlphabetSize> GetInitialOrder() {
+        std::array<T, kAlphabetSize> result;
+        for (size_t i = 0; i < kAlphabetSize; ++i) {
+            result[i] = i;
+        }
+        return result;
+    }
 
 public:
 

@@ -6,7 +6,7 @@ def cyclic_shifts(s):
 
 if __name__ == "__main__":
     # Исходные данные
-    sequence = "123123333222111"
+    sequence = "1231233332221110"
     # Вывод всех циклических сдвигов
     for shift in cyclic_shifts(sequence):
         print(shift)

@@ -44,7 +44,6 @@ void SuffixArray::Build() {
     /*Первоначальный подсчет eq*/
 
     while (!IsSorted(eq)) {
-        std::cout << "Building suffix array.." << std::endl;
         std::fill(count_sort.begin(), count_sort.end(), 0);
         eq_buffer = eq;
         

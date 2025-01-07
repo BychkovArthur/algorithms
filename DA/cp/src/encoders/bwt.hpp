@@ -11,7 +11,7 @@ private:
 
     size_t CalculateEncodedIndex(const std::vector<std::size_t>& suffix_array);
 
-    std::vector<size_t> GetDecodingPermutation(const std::vector<uint8_t>& first, const std::vector<uint8_t>& last);
+    std::vector<size_t> GetDecodingPermutation(const std::vector<uint16_t>& first, const std::vector<uint16_t>& last);
 
     std::vector<int32_t> ConvertToVectorWithSentinel(const std::vector<uint8_t>& text);
 

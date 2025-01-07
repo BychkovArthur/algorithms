@@ -1,4 +1,5 @@
 #include "utils.hpp"
+#include <cassert>
 
 #include <const.hpp>
 
@@ -13,18 +14,19 @@ std::ostream& operator<<(std::ostream& os, const std::vector<uint8_t> vct) {
     return os;
 }
 
-std::vector<uint8_t> CountSort(const std::vector<uint8_t>& text) {
-    std::array<size_t, kAlphabetSize> counter{};
+std::vector<uint16_t> CountSort(const std::vector<uint16_t>& text) {
+    std::array<size_t, kAlphabetSize + 1> counter{};
 
     for (auto character : text) {
+        assert(0 <= character && character < kAlphabetSize + 1);
         ++counter[character];
     }
 
-    std::vector<uint8_t> result;
+    std::vector<uint16_t> result;
     result.reserve(text.size());
-    for (size_t i = 0; i < kAlphabetSize; ++i) {
+    for (size_t i = 0; i < kAlphabetSize + 1; ++i) {
         for (size_t j = 0; j < counter[i]; ++j) {
-            result.push_back(static_cast<uint8_t>(i));
+            result.push_back(static_cast<uint16_t>(i));
         }
     }
     return result;
