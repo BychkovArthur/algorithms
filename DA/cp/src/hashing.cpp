@@ -18,6 +18,7 @@ void update_crc(const char* bytes, size_t n) {
 }
 
 uint32_t calculate_crc32(const MetaInfo& meta, const CompressionLevel& level, const CompressedFile& file) {
+    crc = 0xFFFFFFFF;
     update_crc(reinterpret_cast<const char*>(&meta.compressed_size), sizeof (meta.compressed_size));
     update_crc(reinterpret_cast<const char*>(&meta.uncompressed_size), sizeof (meta.uncompressed_size));
     update_crc(reinterpret_cast<const char*>(&meta.uncompressed_filename_length), sizeof (meta.uncompressed_filename_length));

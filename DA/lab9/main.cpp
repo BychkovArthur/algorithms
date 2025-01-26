@@ -1,11 +1,13 @@
 #include <bits/stdc++.h>
 #include <utility>
 
+
 using namespace std;
 
 vector<vector<int>> graph;
 vector<int> matching;
 vector<bool> used;
+vector<int> color;
 
 bool augment(int v) {
     if (used[v]) {
@@ -23,9 +25,9 @@ bool augment(int v) {
 
 
 bool is_bipartite(int n) {
-    vector<int> color(n, -1);
+    color.assign(n, -1);
     queue<int> q;
-    
+
     for (int start = 0; start < n; ++start) {
         if (color[start] == -1) {
             color[start] = 0;
@@ -57,7 +59,7 @@ int main() {
     cin >> n >> m;
 
     graph.resize(n);
-    matching.resize(n, -1);
+    matching.assign(n, -1);
 
     for (int i = 0; i < m; ++i) {
         int u, v;
@@ -72,20 +74,20 @@ int main() {
     }
 
     if (!is_bipartite(n)) {
-        cout << "-1";
+        cout << "-1\n";
         return 0;
     }
 
     for (int i = 0; i < n; ++i) {
+        if (color[i]) continue;
         used.assign(n, false);
         augment(i);
     }
 
-    set<pair<int, int>> edges;
-
+    vector<pair<int, int>> edges;
     for (int i = 0; i < n; ++i) {
         if (matching[i] != -1) {
-            edges.insert(
+            edges.emplace_back(
                 i < matching[i]
                 ? make_pair(i, matching[i])
                 : make_pair(matching[i], i)
@@ -93,8 +95,12 @@ int main() {
         }
     }
 
+    sort(edges.begin(), edges.end());
+
     cout << edges.size() << '\n';
-    for (const auto& edge: edges) {
+    for (const auto& edge : edges) {
         cout << edge.first + 1 << ' ' << edge.second + 1 << '\n';
     }
+
+    return 0;
 }

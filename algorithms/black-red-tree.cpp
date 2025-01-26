@@ -3,5 +3,6 @@
 
 
 int main() {
-    std::cout << sizeof(std::set<bool>) << std::endl;
+
+	std::cout << sizeof(std::set<bool>) << std::endl;
 }

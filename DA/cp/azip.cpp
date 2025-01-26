@@ -18,6 +18,9 @@
 #include <cstring>
 #include <fmt/format.h>
 
+#include <filesystem>
+
+
 /* TODO:
  * 1) -lr <dir>: вывести информацию по всем файлам.
  * 2) -1 (просто Huffman), -9 (bwt + mtf + huffman)
@@ -80,7 +83,7 @@ size_t CalculateEncodedSize(const CompressedFile& compressed_file, const std::st
 
 CompressedFile CompressFile(const std::string& filename) {
     std::vector<uint8_t> input_file;
-
+    input_file_size = 0;
     if (!from_stdin) {
         std::ifstream ifs(filename, std::ios::binary);
         if (!ifs.is_open()) {
@@ -536,13 +539,33 @@ void TestIntegrity(const std::string& filename) {
 
 }
 
+void CollectFilesRecursively(const std::string& path, std::vector<std::string>& files) {
+    for (const auto& entry : std::filesystem::directory_iterator(path)) {
+        if (entry.is_directory()) {
+            CollectFilesRecursively(entry.path().string(), files);
+        } else if (entry.is_regular_file()) {
+            files.push_back(entry.path().string());
+        }
+    }
+}
 
-// Функция для обработки флагов и файлов
+
 void process_files(const std::vector<std::string>& files) {
+    std::vector<std::string> all_files;
+
+    for (const auto& file : files) {
+        if (recursive && std::filesystem::is_directory(file)) {
+            CollectFilesRecursively(file, all_files);
+        } else {
+            all_files.push_back(file);
+        }
+    }
+
     if (list_info) {
         std::cout << fmt::format("{:>20} {:>20} {:>20} {:>40}", "compressed", "uncompressed", "ratio", "uncompressed_name") << std::endl;
     }
-    for (const auto& file : files) {
+
+    for (const auto& file : all_files) {
         if (list_info) {
             PrintFileMeta(file);
             continue;
@@ -554,11 +577,16 @@ void process_files(const std::vector<std::string>& files) {
         }
 
         if (decompress) {
+            auto start = std::chrono::steady_clock::now();
             WriteDecompressedFile(file);
+            auto end = std::chrono::steady_clock::now();
+            std::cout << fmt::format("File {} decoded. Time: {} ms", file, std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()) << std::endl;
         } else {
+            auto start = std::chrono::steady_clock::now();
             WriteCompressedFile(file);
+            auto end = std::chrono::steady_clock::now();
+            std::cout << fmt::format("File {} encoded. Time: {} ms", file, std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()) << std::endl;
         }
-
     }
 }
 
